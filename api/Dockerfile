@@ -6,7 +6,7 @@ RUN dotnet restore Terra.Api/Terra.Api.csproj
 COPY Terra.Api/ Terra.Api/
 RUN dotnet publish Terra.Api/Terra.Api.csproj -c Release -o /app --no-restore /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0 \
