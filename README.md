@@ -141,7 +141,10 @@ make e2e        # Playwright: builds the web app, starts the API, runs 48 tests 
 ## Deploy to Azure
 1. `./infra/bootstrap.sh <github-owner/repo>` creates Terraform state storage and a GitHub OIDC identity.
 2. Add the repository secrets it prints (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and the variable `TF_STATE_STORAGE`. Optionally add `POWER_AUTOMATE_URL` and `ENABLE_WORDPRESS=true`.
-3. Push to `main`. **CI** must pass, then **Deploy to Azure** applies Terraform, builds the API image in ACR, deploys the API, the Static Web App and the Functions, and runs smoke tests.
+3. Run **Deploy to Azure** from the Actions tab. It applies Terraform, builds the API image in ACR, deploys the API, the Static Web App and the Functions, and runs smoke tests.
+4. Optional: set the repository variable `AUTO_DEPLOY=true` to deploy automatically after every green **CI** run on `main`.
+
+Deploys are opt-in: until `TF_STATE_STORAGE` is set, the workflow skips instead of failing. Expect roughly AUD 40–60/month idle. WordPress (`ENABLE_WORDPRESS=true`) adds about AUD 25/month for MySQL.
 4. Import the Power Platform pieces (see `power-platform/README.md`).
 
 ---

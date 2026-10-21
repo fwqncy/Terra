@@ -25,7 +25,11 @@ env:
 jobs:
   infra:
     name: Terraform apply
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Opt-in: nothing runs until Azure is bootstrapped (TF_STATE_STORAGE is set). After that, run it from
+    # the Actions tab, or set the repo variable AUTO_DEPLOY=true to deploy after every green CI on main.
+    if: >-
+      vars.TF_STATE_STORAGE != '' && (github.event_name == 'workflow_dispatch' ||
+      (vars.AUTO_DEPLOY == 'true' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     environment: production
     outputs:
