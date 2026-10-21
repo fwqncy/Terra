@@ -1,0 +1,64 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": { "connectionReferenceLogicalName": "terra_sharedteams" },
+        "api": { "name": "shared_teams" }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": { "defaultValue": {}, "type": "Object" },
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "Ops Team Id (terra_OpsTeamId)": { "defaultValue": "", "type": "String", "metadata": { "schemaName": "terra_OpsTeamId" } },
+        "Ops Channel Id (terra_OpsChannelId)": { "defaultValue": "", "type": "String", "metadata": { "schemaName": "terra_OpsChannelId" } }
+      },
+      "triggers": {
+        "When_the_daily_dispatch_is_published": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "triggerAuthenticationType": "All",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "issue": { "type": "integer" },
+                "title": { "type": "string" },
+                "date": { "type": "string" },
+                "lines": { "type": "array", "items": { "type": "string" } },
+                "facts": { "type": "object" }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Join_the_lines": {
+          "type": "Join",
+          "runAfter": {},
+          "inputs": { "from": "@triggerBody()?['lines']", "joinWith": "<br>" }
+        },
+        "Post_the_dispatch": {
+          "type": "OpenApiConnection",
+          "runAfter": { "Join_the_lines": ["Succeeded"] },
+          "inputs": {
+            "host": { "connectionName": "shared_teams", "operationId": "PostMessageToConversation", "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams" },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body/recipient/groupId": "@parameters('Ops Team Id (terra_OpsTeamId)')",
+              "body/recipient/channelId": "@parameters('Ops Channel Id (terra_OpsChannelId)')",
+              "body/messageBody": "<h2>@{triggerBody()?['title']}</h2><p><em>@{triggerBody()?['date']}</em></p><p>@{body('Join_the_lines')}</p>"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

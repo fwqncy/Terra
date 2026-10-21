@@ -1,0 +1,154 @@
+:host {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  margin-bottom: 6px;
+}
+
+.table-toggle {
+  margin-left: auto;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.key--rect {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.plot {
+  position: relative;
+}
+
+svg {
+  display: block;
+  overflow: visible;
+  font-family: var(--font-sans);
+}
+
+svg:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cross {
+  stroke: var(--text-2);
+  stroke-width: 1;
+}
+
+.ring {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.col {
+  cursor: default;
+  outline: none;
+}
+
+.col .hit {
+  fill: transparent;
+}
+
+.col.is-hover path {
+  filter: brightness(1.18);
+}
+
+.col:focus-visible .hit {
+  fill: color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+.tip {
+  position: absolute;
+  z-index: 3;
+  min-width: 160px;
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: var(--elev-2);
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.tip-title {
+  margin-bottom: 6px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+.tip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.6;
+}
+
+.tip-row span:last-child {
+  color: var(--text-2);
+}
+
+.tip-row.total {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.tip-key {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.tip-key--rect {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}

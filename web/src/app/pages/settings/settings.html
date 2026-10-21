@@ -1,0 +1,163 @@
+<div class="page settings">
+  <header class="head">
+    <span class="eyebrow">Make it yours</span>
+    <h1 class="display">Settings</h1>
+  </header>
+
+  <section class="block" aria-labelledby="mode-title">
+    <h2 id="mode-title">Mode</h2>
+    <div class="segmented" role="group" aria-label="Colour mode">
+      <button type="button" [attr.aria-pressed]="theme.modePref() === 'system'" (click)="theme.modePref.set('system')"><app-icon name="settings" [size]="16" />System</button>
+      <button type="button" [attr.aria-pressed]="theme.modePref() === 'light'" (click)="theme.modePref.set('light')"><app-icon name="sun" [size]="16" />Light</button>
+      <button type="button" [attr.aria-pressed]="theme.modePref() === 'dark'" (click)="theme.modePref.set('dark')"><app-icon name="moon" [size]="16" />Dark</button>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="preset-title">
+    <h2 id="preset-title">Colour scheme</h2>
+    <div class="presets" role="radiogroup" aria-label="Colour scheme">
+      @for (p of presets; track p.id) {
+        <button type="button" class="preset" role="radio" [attr.aria-checked]="theme.presetId() === p.id" (click)="theme.setPreset(p.id)">
+          <span class="strip" aria-hidden="true">
+            <span [style.background]="p.swatches.ink"></span>
+            <span [style.background]="p.swatches.deep"></span>
+            <span [style.background]="p.swatches.primary"></span>
+            <span [style.background]="p.swatches.accent"></span>
+            <span [style.background]="p.swatches.light"></span>
+          </span>
+          <strong>{{ p.name }}@if (p.id === 'nightshift') { <span class="badge">Default</span>}</strong>
+          <small class="subtle">{{ p.source }}</small>
+        </button>
+      }
+      <button type="button" class="preset" role="radio" [attr.aria-checked]="theme.presetId() === 'custom'" (click)="theme.setSwatch(slot(), current())">
+        <span class="strip" aria-hidden="true">
+          @for (k of swatchKeys; track k) {
+            <span [style.background]="theme.custom()[k]"></span>
+          }
+        </span>
+        <strong>Custom</strong>
+        <small class="subtle">Your own five colours, picked on the wheel below</small>
+      </button>
+    </div>
+  </section>
+
+  <section class="block custom" aria-labelledby="custom-title">
+    <div class="custom-head">
+      <h2 id="custom-title">Colour wheel</h2>
+      <p class="muted">Pick a slot, then choose its colour. Editing any slot switches you to the Custom scheme.</p>
+    </div>
+    <div class="custom-grid">
+      <div class="slots" role="radiogroup" aria-label="Palette slot to edit">
+        @for (k of swatchKeys; track k) {
+          <button type="button" class="slot" role="radio" [attr.aria-checked]="slot() === k" (click)="slot.set(k)">
+            <span class="chip" [style.background]="theme.swatches()[k]" aria-hidden="true"></span>
+            <span><strong>{{ swatchLabels[k] }}</strong><small class="mono subtle">{{ theme.swatches()[k] }}</small></span>
+          </button>
+        }
+      </div>
+
+      <app-color-wheel [color]="current()" [label]="swatchLabels[slot()]" (colorChange)="onWheel($event)" />
+
+      <div class="generate panel">
+        <h3>Generate from one colour</h3>
+        <p class="muted small">Builds all five slots around the {{ swatchLabels[slot()] }} colour ({{ current() }}), keeping enough contrast for text.</p>
+        <div class="field">
+          <label for="harmony">Harmony</label>
+          <select id="harmony" class="select" [value]="harmony()" (change)="harmony.set($any($event.target).value)">
+            @for (h of harmonies; track h.id) {
+              <option [value]="h.id" [selected]="harmony() === h.id">{{ h.label }}</option>
+            }
+          </select>
+        </div>
+        <button class="btn btn--primary" type="button" (click)="generate()"><app-icon name="wand" [size]="16" />Generate Palette</button>
+
+        <h3 class="contrast-title">Contrast check</h3>
+        <table class="table contrast">
+          <caption class="sr-only">APCA and WCAG contrast for the current theme</caption>
+          <thead><tr><th scope="col">Pair</th><th scope="col" class="num">APCA Lc</th><th scope="col" class="num">WCAG</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            @for (r of theme.contrastReport(); track r.label) {
+              <tr>
+                <th scope="row" class="pair"><span class="sample" [style.background]="r.bg" [style.color]="r.fg">Aa</span>{{ r.label }}</th>
+                <td class="num">{{ fmt.whole(r.lc) }}</td>
+                <td class="num">{{ fmt.one(r.wcag) }}:1</td>
+                <td><span class="badge" [class.badge--good]="r.pass" [class.badge--serious]="!r.pass"><app-icon [name]="r.pass ? 'check' : 'alert'" />{{ r.pass ? 'Pass' : 'Low (needs Lc ' + r.minLc + ')' }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="hint">Terra nudges text colours until they reach a readable contrast, so even wild palettes stay legible.</p>
+      </div>
+    </div>
+
+    <div class="preview panel" aria-label="Live preview">
+      <span class="caption-box">Preview</span>
+      <h3 class="display">Teach the cars.</h3>
+      <p class="muted">Body text, <a routerLink="/city">a link</a>, and the buttons below all use your palette.</p>
+      <div class="row">
+        <span class="btn btn--primary" aria-hidden="true">Primary</span>
+        <span class="btn btn--highlight" aria-hidden="true">Highlight</span>
+        <span class="btn" aria-hidden="true">Secondary</span>
+        <span class="speech" aria-hidden="true">KA-CHING!</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="fx-title">
+    <h2 id="fx-title">Effects & motion</h2>
+    <label class="check"><input type="checkbox" [checked]="theme.halftone()" (change)="theme.halftone.set($any($event.target).checked)" />Halftone dots (comic Ben-Day shading on backgrounds, maps and 3D)</label>
+    <div class="segmented" role="group" aria-label="Motion">
+      <button type="button" [attr.aria-pressed]="theme.motionPref() === 'system'" (click)="theme.motionPref.set('system')">Follow system</button>
+      <button type="button" [attr.aria-pressed]="theme.motionPref() === 'reduce'" (click)="theme.motionPref.set('reduce')">Reduce motion</button>
+    </div>
+    <p class="hint">Reduced motion stops idle animation, cuts the landing camera between shots instead of flying, and pauses the ticker.</p>
+    <button class="btn btn--sm btn--ghost" type="button" (click)="resetTheme()">Reset Appearance…</button>
+  </section>
+
+  <section class="block" aria-labelledby="acct-title">
+    <h2 id="acct-title">Player & backend</h2>
+    <div class="two">
+      <div class="field">
+        <label for="player-name">Display name</label>
+        <input id="player-name" class="input" name="nickname" autocomplete="nickname" spellcheck="false" maxlength="32" placeholder="Courier 1234…" [value]="api.playerName()" (change)="api.setPlayerName($any($event.target).value)" />
+        <p class="hint">Shown on the leaderboard and on the WordPress site.</p>
+      </div>
+      <form class="field" (submit)="$event.preventDefault(); testApi()">
+        <label for="api-base">API address</label>
+        <div class="row">
+          <input id="api-base" class="input grow" name="api" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="http://localhost:5080/api" [value]="apiDraft()" (input)="apiDraft.set($any($event.target).value)" />
+          <button class="btn" type="submit" [attr.aria-busy]="testing()" [disabled]="testing()">Test Connection</button>
+        </div>
+        <p class="hint">
+          Status:
+          <span class="badge" [class.badge--good]="api.online()"><span class="dot"></span>{{ api.online() ? 'Online' : api.status() === 'checking' ? 'Checking…' : 'Offline: running locally' }}</span>
+          @if (api.health(); as h) {
+            · SQL {{ h.sql ? 'on' : 'off' }} · NoSQL {{ h.nosql ? 'on' : 'off' }} · v{{ h.version }}
+          }
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="keys-title">
+    <h2 id="keys-title">Keyboard shortcuts</h2>
+    <dl class="keys">
+      @for (s of shortcuts; track s.what) {
+        <div>
+          <dt>
+            @for (k of s.keys; track k) {
+              <kbd>{{ k }}</kbd>
+            }
+          </dt>
+          <dd>{{ s.what }}</dd>
+        </div>
+      }
+    </dl>
+  </section>
+
+  <section class="block" aria-labelledby="data-title">
+    <h2 id="data-title">Data</h2>
+    <p class="muted">Your Depot save, worlds, lanes and brains live in this browser. Export or reset the save in the <a routerLink="/depot">Depot</a>.</p>
+    <p class="subtle small">Map data © OpenStreetMap contributors (ODbL). Coastlines from Natural Earth (public domain).</p>
+  </section>
+</div>

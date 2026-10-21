@@ -1,0 +1,6 @@
+# Copy to backend.hcl (git-ignored) after running ../bootstrap.sh
+resource_group_name  = "rg-terra-tfstate"
+storage_account_name = "stterratfstateXXXXX"
+container_name       = "tfstate"
+key                  = "terra-dev.tfstate"
+use_azuread_auth     = true

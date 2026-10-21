@@ -1,0 +1,23 @@
+/* Comic-panel styling for Terra shortcodes (Nightshift palette). */
+.terra-card {
+  margin: 1.5em 0;
+  padding: 1.25em;
+  border: 3px solid #0c0a08;
+  border-radius: 14px;
+  background: #fffdf5 radial-gradient(rgba(53, 54, 156, 0.08) 1px, transparent 1.2px) 0 0 / 8px 8px;
+  box-shadow: 5px 5px 0 #0c0a08;
+  color: #24201a;
+}
+.terra-title { margin: 0 0 0.6em; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; }
+.terra-caption { display: inline-block; margin-bottom: 0.8em; padding: 0.2em 0.7em; background: #c8c793; border: 2px solid #0c0a08; font-weight: 800; text-transform: uppercase; font-size: 0.8em; }
+.terra-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.terra-table th, .terra-table td { padding: 0.5em 0.6em; border-top: 1px solid rgba(36, 32, 26, 0.15); text-align: left; }
+.terra-table .num { text-align: right; }
+.terra-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8em; margin: 0; }
+.terra-tiles div { padding: 0.7em; border: 2px solid #0c0a08; border-radius: 10px; background: #fff; }
+.terra-tiles dt { font-size: 0.8em; font-weight: 700; color: #57524a; }
+.terra-tiles dd { margin: 0; font-size: 1.6em; font-weight: 900; font-variant-numeric: tabular-nums; }
+.terra-empty { color: #57524a; font-style: italic; }
+.terra-button { display: inline-block; padding: 0.7em 1.2em; border: 3px solid #0c0a08; border-radius: 10px; background: #35369c; color: #c8c793 !important; font-weight: 800; text-decoration: none; box-shadow: 3px 3px 0 #0c0a08; }
+.terra-button:hover, .terra-button:focus-visible { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #0c0a08; }
+@media (prefers-reduced-motion: reduce) { .terra-button:hover { transform: none; } }

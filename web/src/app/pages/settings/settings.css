@@ -1,0 +1,253 @@
+:host {
+  display: block;
+}
+
+.settings {
+  display: grid;
+  gap: 8px;
+  padding-block: 24px 64px;
+  max-width: 1200px;
+}
+
+.head h1 {
+  font-size: clamp(44px, 7vw, 88px);
+  margin-top: 6px;
+}
+
+.block {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  padding: 24px 0;
+  border-top: 2px solid var(--border);
+  scroll-margin-top: calc(var(--topbar-h) + 16px);
+}
+
+.block > h2 {
+  font-size: 22px;
+  font-weight: 900;
+  font-stretch: 80%;
+  text-transform: uppercase;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.preset {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+
+.preset:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--comic-shadow-sm);
+}
+
+.preset[aria-checked='true'] {
+  border-color: var(--ink-line);
+  box-shadow: var(--comic-shadow);
+  outline: 3px solid var(--highlight);
+  outline-offset: 2px;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: 48px;
+  border-radius: var(--r-2);
+  overflow: hidden;
+  border: 2px solid var(--ink-line);
+}
+
+.preset strong {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.preset small {
+  font-size: 12px;
+}
+
+.custom {
+  justify-items: stretch;
+}
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: 220px 300px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.slots {
+  display: grid;
+  gap: 8px;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.slot[aria-checked='true'] {
+  border-color: var(--ink-line);
+  background: var(--highlight);
+  color: var(--on-highlight);
+}
+
+.slot[aria-checked='true'] .subtle {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.slot strong,
+.slot small {
+  display: block;
+}
+
+.chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 2px solid var(--ink-line);
+  flex: none;
+}
+
+.generate {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  justify-items: start;
+}
+
+.generate h3 {
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.contrast-title {
+  margin-top: 8px;
+}
+
+.contrast {
+  font-size: 13px;
+}
+
+.contrast th.pair {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.sample {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 22px;
+  border-radius: 5px;
+  font-weight: 800;
+  border: 1px solid var(--border);
+}
+
+.preview {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 6px;
+  padding: 20px;
+  background-image: radial-gradient(var(--dot-strong) 1.2px, transparent 1.4px);
+  background-size: 8px 8px;
+}
+
+.preview h3 {
+  font-size: 44px;
+}
+
+.preview .speech {
+  margin-left: 8px;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 24px;
+  width: 100%;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+  width: 100%;
+}
+
+.keys div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.keys dt {
+  display: flex;
+  gap: 4px;
+  min-width: 96px;
+}
+
+.keys dd {
+  margin: 0;
+  color: var(--text-2);
+}
+
+@media (max-width: 1000px) {
+  .custom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slots {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .two {
+    grid-template-columns: 1fr;
+  }
+}

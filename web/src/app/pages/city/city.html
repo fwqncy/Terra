@@ -1,0 +1,373 @@
+<h1 class="sr-only">City Lab: {{ mapMeta().title }}</h1>
+<div class="workspace">
+  <section class="stage" aria-label="City simulation">
+    <canvas
+      #canvas
+      class="canvas"
+      [attr.tabindex]="show3d() && ready3d() ? -1 : 0"
+      [attr.aria-hidden]="show3d() && ready3d() ? 'true' : null"
+      [class.is-pan]="current() !== 'build' || tool() === 'pan'"
+      [attr.aria-label]="current() === 'motorway' ? 'M1 motorway training view' : mapMeta().title + ' road network. Arrow keys pan, plus and minus zoom, 0 fits the view, V switches to 3D.'"
+      aria-describedby="city-status"
+    ></canvas>
+    <div
+      #mount3d
+      class="scene3d"
+      [class.is-ready]="ready3d()"
+      [hidden]="!show3d()"
+      role="application"
+      aria-roledescription="3D city view"
+      [attr.aria-label]="mapMeta().title + ' in 3D. Drag to orbit, right-drag to pan, scroll to zoom, arrow keys pan. V returns to the 2D map.'"
+      aria-describedby="city-status"
+    ></div>
+
+    <div class="hud hud--tl">
+      <span class="caption-box">{{ current() === 'motorway' ? 'M1 · Brisbane → Gold Coast' : mapMeta().title }}</span>
+      @if (generating() && current() !== 'motorway') {
+        <span class="badge"><span class="spinner" aria-hidden="true"></span>Generating world…</span>
+      } @else if (show3d() && !ready3d()) {
+        <span class="badge"><span class="spinner" aria-hidden="true"></span>Loading 3D…</span>
+      } @else if (show3d()) {
+        <span class="badge subtle-badge">{{ coarsePointer ? 'Drag to orbit · pinch to zoom · two fingers to pan' : 'Drag to orbit · right-drag to pan · scroll to zoom' }}</span>
+      } @else if (current() !== 'motorway' && genMs() > 0) {
+        <span class="badge subtle-badge">Built in {{ genMs() }}&nbsp;ms (Web Worker)</span>
+      }
+    </div>
+
+    <div class="hud hud--tr hud-stack">
+      @if (current() !== 'motorway') {
+        <nav class="segmented" aria-label="View">
+          <a [routerLink]="[]" [queryParams]="{ view: null }" queryParamsHandling="merge" replaceUrl [class.is-active]="!view3d()" [attr.aria-current]="!view3d() ? 'page' : null" aria-keyshortcuts="V"><app-icon name="map" [size]="16" />2D Map</a>
+          <a [routerLink]="[]" [queryParams]="{ view: '3d' }" queryParamsHandling="merge" replaceUrl [class.is-active]="view3d()" [attr.aria-current]="view3d() ? 'page' : null" aria-keyshortcuts="V"><app-icon name="ops" [size]="16" />3D View</a>
+        </nav>
+      }
+      @if (running()) {
+        <div class="segmented" role="group" aria-label="Simulation speed">
+          @for (s of [1, 2, 5, 10]; track s) {
+            <button type="button" [attr.aria-pressed]="speed() === s" (click)="speed.set(s)">{{ s }}×</button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="hud hud--bl zoom" role="group" aria-label="Zoom">
+      <button class="btn btn--icon btn--sm" type="button" aria-label="Zoom in" (click)="zoom(1 / 1.3)"><app-icon name="zoomIn" /></button>
+      <button class="btn btn--icon btn--sm" type="button" aria-label="Zoom out" (click)="zoom(1.3)"><app-icon name="zoomOut" /></button>
+      @if (current() !== 'motorway') {
+        <button class="btn btn--icon btn--sm" type="button" [attr.aria-label]="show3d() ? 'Reset the 3D camera' : 'Fit the route in view'" aria-keyshortcuts="0" (click)="fitView(true)"><app-icon name="fit" /></button>
+      }
+    </div>
+
+    <div class="hud hud--br statline tabular" id="city-status">
+      @switch (current()) {
+        @case ('train') {
+          @if (running()) {
+            Gen {{ stats().generation + 1 }} · {{ stats().alive }}/{{ stats().population }} driving · {{ stats().arrived }} arrived · leader {{ fmt.pct(stats().progress) }}
+          } @else {
+            Ready to train · {{ routeInfo() }}
+          }
+        }
+        @case ('fleet') {
+          @if (running()) {
+            {{ stats().population }} cars · {{ stats().deliveries }} deliveries · +{{ formatCoins(sessionCoins()) }} coins
+          } @else {
+            Deploy a fleet to start earning
+          }
+        }
+        @case ('motorway') {
+          @if (running()) {
+            Gen {{ stats().generation + 1 }} · {{ stats().alive }}/{{ stats().population }} driving · leader passed {{ stats().passed }} cars
+          } @else {
+            Press Start to release the fleet onto the M1
+          }
+        }
+        @default {
+          {{ fmt.whole(counts().points) }} intersections · {{ fmt.whole(counts().segments) }} roads · {{ fmt.whole(counts().buildings) }} buildings
+        }
+      }
+    </div>
+  </section>
+
+  <aside class="side" aria-label="City Lab controls">
+    <nav class="tabs" aria-label="Mode">
+      <a [routerLink]="[]" [queryParams]="{ mode: null }" queryParamsHandling="merge" [class.is-active]="current() === 'build'" [attr.aria-current]="current() === 'build' ? 'page' : null"><app-icon name="road" [size]="16" />Build</a>
+      <a [routerLink]="[]" [queryParams]="{ mode: 'train' }" queryParamsHandling="merge" [class.is-active]="current() === 'train'" [attr.aria-current]="current() === 'train' ? 'page' : null"><app-icon name="brain" [size]="16" />Train</a>
+      <a [routerLink]="[]" [queryParams]="{ mode: 'fleet' }" queryParamsHandling="merge" [class.is-active]="current() === 'fleet'" [attr.aria-current]="current() === 'fleet' ? 'page' : null"><app-icon name="truck" [size]="16" />Fleet</a>
+      <a [routerLink]="[]" [queryParams]="{ mode: 'motorway' }" queryParamsHandling="merge" [class.is-active]="current() === 'motorway'" [attr.aria-current]="current() === 'motorway' ? 'page' : null"><app-icon name="fast" [size]="16" />M1</a>
+    </nav>
+
+    <div class="side-body">
+      @switch (current()) {
+        @case ('build') {
+          <section class="group">
+            <div class="field">
+              <label for="map-select">City</label>
+              <select id="map-select" class="select" [ngModel]="mapId()" (ngModelChange)="loadMap($event)">
+                @for (m of maps; track m.id) {
+                  <option [value]="m.id" [disabled]="!game.owns('maps', m.id)">{{ m.title }}{{ game.owns('maps', m.id) ? '' : ' (locked)' }}</option>
+                }
+              </select>
+              <p class="hint">More cities unlock in the <a routerLink="/depot" [queryParams]="{ tab: 'maps' }">Depot</a>.</p>
+            </div>
+          </section>
+
+          <section class="group" aria-labelledby="tools-title">
+            <h2 id="tools-title" class="group-title">Tools</h2>
+            <div class="tool-grid" role="toolbar" aria-label="Editing tools">
+              @for (t of tools; track t.id) {
+                <button type="button" class="tool" [attr.aria-pressed]="tool() === t.id" (click)="setTool(t.id)" [attr.aria-keyshortcuts]="t.key">
+                  <app-icon [name]="t.icon" />
+                  <span>{{ t.label }}</span>
+                  <kbd>{{ t.key }}</kbd>
+                </button>
+              }
+            </div>
+            <p class="hint tool-hint">{{ show3d() ? 'You’re looking at the 3D view. Pick a tool to edit on the 2D map.' : activeTool().hint }}</p>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Route</h2>
+            <p class="hint">{{ routeInfo() }}</p>
+            <div class="row">
+              <button class="btn btn--sm" type="button" (click)="randomRoute()"><app-icon name="wand" [size]="16" />Random Route</button>
+              <a class="btn btn--sm btn--primary" [routerLink]="[]" [queryParams]="{ mode: 'train' }" queryParamsHandling="merge">Train on It</a>
+            </div>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Look</h2>
+            <div class="field">
+              <label for="home-style">Home style</label>
+              <select id="home-style" class="select" [ngModel]="game.equipped().home" (ngModelChange)="setHomeStyle($event)">
+                @for (h of homeStyles; track h.id) {
+                  <option [value]="h.id" [disabled]="!game.owns('homes', h.id)">{{ h.label }}{{ game.owns('homes', h.id) ? '' : ' (locked)' }}</option>
+                }
+              </select>
+            </div>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Map Data</h2>
+            <dl class="counts tabular">
+              <div><dt>Intersections</dt><dd>{{ fmt.whole(counts().points) }}</dd></div>
+              <div><dt>Roads</dt><dd>{{ fmt.whole(counts().segments) }}</dd></div>
+              <div><dt>Buildings</dt><dd>{{ fmt.whole(counts().buildings) }}</dd></div>
+              <div><dt>Trees</dt><dd>{{ fmt.whole(counts().trees) }}</dd></div>
+            </dl>
+            <div class="row">
+              <label class="btn btn--sm file-btn">
+                <app-icon name="upload" [size]="16" />Import OSM…
+                <input #osm type="file" accept="application/json,.json" class="sr-only" (change)="importOsm(osm)" />
+              </label>
+              <button class="btn btn--sm" type="button" (click)="exportWorld()"><app-icon name="download" [size]="16" />Export</button>
+              @if (api.online()) {
+                <button #cloud class="btn btn--sm" type="button" (click)="saveToCloud(cloud)"><app-icon name="save" [size]="16" />Save to Cloud</button>
+              }
+            </div>
+            <p class="hint">Import an Overpass API export (ways tagged <code>highway</code>, with <code>out body; &gt;;</code>).</p>
+            <div class="row danger-zone">
+              <button class="btn btn--sm btn--ghost" type="button" (click)="clearMarkings()">Clear Markings…</button>
+              <button class="btn btn--sm btn--ghost" type="button" (click)="clearRoads()">Erase Roads…</button>
+              <button class="btn btn--sm btn--ghost" type="button" (click)="resetMap()">Reset Map…</button>
+            </div>
+          </section>
+        }
+
+        @case ('train') {
+          <section class="group">
+            <button class="btn btn--lg wide" [class.btn--highlight]="!running()" [class.btn--danger]="running()" type="button" [attr.aria-busy]="generating() && !running()" (click)="toggleTraining()">
+              <app-icon [name]="running() ? 'stop' : 'play'" />{{ running() ? 'Stop Training' : 'Start Training' }}
+            </button>
+            <p class="hint">{{ routeInfo() }}</p>
+          </section>
+
+          <section class="group stats-grid tabular" aria-label="Training stats">
+            <div><span>Generation</span><strong>{{ stats().generation + 1 }}</strong></div>
+            <div><span>Driving</span><strong>{{ stats().alive }}<small>/{{ stats().population }}</small></strong></div>
+            <div><span>Crashed</span><strong>{{ stats().crashed }}</strong></div>
+            <div><span>Arrived</span><strong>{{ stats().arrived }}</strong></div>
+            <div class="span2">
+              <span>Leader progress</span>
+              <div class="meter" role="meter" aria-label="Leader progress along the route" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="Math.round(stats().progress * 100)"><span [style.width.%]="stats().progress * 100"></span></div>
+            </div>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Learning Curve</h2>
+            @if (history().length > 1) {
+              <app-line-chart [series]="chartSeries()" [labels]="chartLabels()" [height]="170" [yFormat]="chartFormat()" xTitle="Generation" ariaLabel="Best and mean route progress per generation" />
+            } @else {
+              <p class="empty-note">The curve appears after two generations. Each point is how far the best and the average car got along the route.</p>
+            }
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Leader’s Brain</h2>
+            <app-nn-canvas class="nn" [source]="leaderBrain" />
+            <p class="hint">Bottom: 7 ray sensors + route bearing, speed and lane offset. Top: accelerate, left, right, brake. Amber weights are positive, dashed blue negative.</p>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Settings</h2>
+            <div class="field">
+              <label for="seed">Starting brain</label>
+              <select id="seed" class="select" [ngModel]="seed()" (ngModelChange)="seed.set($event); reseed()">
+                <option value="factory">Factory Autopilot (pre-trained)</option>
+                <option value="random">Random (learn from scratch)</option>
+                @for (b of domainBrains(); track b.id) {
+                  <option [value]="b.id">{{ b.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label for="pop">Population <output class="tabular">{{ population() }}</output></label>
+              <input id="pop" type="range" min="20" max="200" step="10" [ngModel]="population()" (ngModelChange)="population.set(+$event)" />
+            </div>
+            <div class="field">
+              <label for="mut">Mutation <output class="tabular">{{ fmt.pct(mutation()) }}</output></label>
+              <input id="mut" type="range" min="0.02" max="0.5" step="0.01" [ngModel]="mutation()" (ngModelChange)="mutation.set(+$event)" />
+            </div>
+            <label class="check"><input type="checkbox" [ngModel]="showSensors()" (ngModelChange)="showSensors.set($event)" />Show the leader’s sensors</label>
+            <label class="check"><input type="checkbox" [ngModel]="follow()" (ngModelChange)="follow.set($event)" />Camera follows the leader</label>
+            <label class="check"><input type="checkbox" [ngModel]="obeyLights()" (ngModelChange)="obeyLights.set($event)" />Red lights block cars</label>
+          </section>
+
+          <section class="group">
+            <h2 class="group-title">Brains</h2>
+            <form class="row" (submit)="$event.preventDefault(); saveBrain()">
+              <label class="sr-only" for="brain-name">Brain name</label>
+              <input id="brain-name" class="input grow" name="brainName" autocomplete="off" spellcheck="false" placeholder="e.g. Queen St Courier…" [ngModel]="brainName()" (ngModelChange)="brainName.set($event)" />
+              <button class="btn btn--sm" type="submit"><app-icon name="save" [size]="16" />Save Brain</button>
+            </form>
+            <ul class="brain-list">
+              @for (b of domainBrains(); track b.id) {
+                <li>
+                  <span class="grow"><strong>{{ b.name }}</strong><small class="subtle">Gen {{ b.generation }} · {{ fmt.date(b.savedAt) }}{{ b.remote ? ' · cloud' : '' }}</small></span>
+                  <button class="btn btn--ghost btn--icon btn--sm" type="button" [attr.aria-label]="'Download ' + b.name" (click)="brains.download(b)"><app-icon name="download" [size]="16" /></button>
+                  <button class="btn btn--ghost btn--icon btn--sm" type="button" [attr.aria-label]="'Delete ' + b.name" (click)="removeBrain(b)"><app-icon name="trash" [size]="16" /></button>
+                </li>
+              } @empty {
+                <li class="empty-note">No saved brains yet. Train, then save your best driver.</li>
+              }
+            </ul>
+            <label class="btn btn--sm file-btn">
+              <app-icon name="upload" [size]="16" />Import Brain…
+              <input #brainFile type="file" accept="application/json,.json" class="sr-only" (change)="importBrain(brainFile)" />
+            </label>
+          </section>
+
+          <section class="group bootcamp">
+            <h2 class="group-title">Bootcamp <span class="badge">Web Worker</span></h2>
+            <p class="hint">Train a generalist in the background: every brain drives several random routes per generation, so the winner handles the whole map.</p>
+            @if (bootcamp(); as b) {
+              <div class="meter" role="progressbar" aria-label="Bootcamp progress" [attr.aria-valuenow]="b.generation" [attr.aria-valuemax]="b.total"><span [style.width.%]="(b.generation / b.total) * 100"></span></div>
+              <p class="tabular small">Generation {{ b.generation }}/{{ b.total }} · best {{ fmt.pct(Math.min(1, b.best)) }} average progress · {{ b.arrivals }} arrivals over {{ b.routes }} routes</p>
+              @if (b.running) {
+                <button class="btn btn--sm" type="button" (click)="cancelBootcamp()">Cancel</button>
+              }
+            } @else {
+              <div class="row">
+                <label class="sr-only" for="boot-gens">Generations</label>
+                <select id="boot-gens" class="select select--sm" [ngModel]="bootGens()" (ngModelChange)="bootGens.set(+$event)">
+                  <option [ngValue]="15">15 generations</option>
+                  <option [ngValue]="30">30 generations</option>
+                  <option [ngValue]="60">60 generations</option>
+                </select>
+                <label class="sr-only" for="boot-routes">Routes</label>
+                <select id="boot-routes" class="select select--sm" [ngModel]="bootRoutes()" (ngModelChange)="bootRoutes.set(+$event)">
+                  <option [ngValue]="4">4 routes</option>
+                  <option [ngValue]="6">6 routes</option>
+                  <option [ngValue]="10">10 routes</option>
+                </select>
+              </div>
+              <button class="btn btn--sm btn--primary" type="button" (click)="startBootcamp()"><app-icon name="brain" [size]="16" />Start Bootcamp</button>
+            }
+          </section>
+        }
+
+        @case ('fleet') {
+          <section class="group">
+            <h2 class="group-title">Delivery Fleet</h2>
+            <p class="hint">Deploy your best brain onto random routes across {{ mapMeta().title }}. Every delivery pays coins in the Depot.</p>
+            <div class="field">
+              <label for="fleet-size">Cars <output class="tabular">{{ fleetSize() }}</output></label>
+              <input id="fleet-size" type="range" min="4" max="30" step="1" [ngModel]="fleetSize()" (ngModelChange)="fleetSize.set(+$event)" [disabled]="running()" />
+            </div>
+            <div class="field">
+              <label for="fleet-seed">Brain</label>
+              <select id="fleet-seed" class="select" [ngModel]="seed()" (ngModelChange)="seed.set($event); reseed()" [disabled]="running()">
+                <option value="factory">Factory Autopilot</option>
+                @for (b of domainBrains(); track b.id) {
+                  <option [value]="b.id">{{ b.name }}</option>
+                }
+              </select>
+              <p class="hint">Tip: the last brain you trained is used if you skip this.</p>
+            </div>
+            <button class="btn btn--lg wide" [class.btn--highlight]="!running()" [class.btn--danger]="running()" type="button" [attr.aria-busy]="generating() && !running()" (click)="toggleFleet()">
+              <app-icon [name]="running() ? 'stop' : 'truck'" />{{ running() ? 'Recall Fleet' : 'Deploy Fleet' }}
+            </button>
+          </section>
+          @if (show3d()) {
+            <section class="group">
+              <label class="check"><input type="checkbox" [ngModel]="follow()" (ngModelChange)="follow.set($event)" />3D camera follows a courier</label>
+            </section>
+          }
+          <section class="group stats-grid tabular" aria-label="Fleet stats">
+            <div><span>Cars</span><strong>{{ stats().population }}</strong></div>
+            <div><span>Deliveries</span><strong>{{ stats().deliveries }}</strong></div>
+            <div class="span2"><span>Coins this session</span><strong>+{{ formatCoins(sessionCoins()) }}</strong></div>
+          </section>
+          <section class="group">
+            <h2 class="group-title">How It Works</h2>
+            <p class="hint">Each car gets a random Start and Target, plans the shortest path with Dijkstra, and drives it with the same sensors and network it trained with. Crashed cars respawn after a short tow.</p>
+          </section>
+        }
+
+        @case ('motorway') {
+          <section class="group">
+            <button class="btn btn--lg wide" [class.btn--highlight]="!running()" [class.btn--danger]="running()" type="button" (click)="toggleMotorway()">
+              <app-icon [name]="running() ? 'stop' : 'play'" />{{ running() ? 'Stop' : 'Start the M1 Trainer' }}
+            </button>
+            <p class="hint">The classic: a 3-lane motorway, slow traffic, and a population that learns to overtake. Fitness is the number of cars passed.</p>
+          </section>
+          <section class="group stats-grid tabular" aria-label="Motorway stats">
+            <div><span>Generation</span><strong>{{ stats().generation + 1 }}</strong></div>
+            <div><span>Driving</span><strong>{{ stats().alive }}<small>/{{ stats().population }}</small></strong></div>
+            <div><span>Passed</span><strong>{{ stats().passed }}</strong></div>
+            <div><span>Distance</span><strong>{{ fmt.km(stats().distance / 6000) }}</strong></div>
+          </section>
+          <section class="group">
+            <h2 class="group-title">Learning Curve</h2>
+            @if (history().length > 1) {
+              <app-line-chart [series]="chartSeries()" [labels]="chartLabels()" [height]="170" [yFormat]="chartFormat()" xTitle="Generation" ariaLabel="Cars passed per generation" />
+            } @else {
+              <p class="empty-note">Appears after two generations.</p>
+            }
+          </section>
+          <section class="group">
+            <h2 class="group-title">Leader’s Brain</h2>
+            <app-nn-canvas class="nn" [source]="leaderBrain" />
+          </section>
+          <section class="group">
+            <div class="field">
+              <label for="mw-seed">Starting brain</label>
+              <select id="mw-seed" class="select" [ngModel]="seed()" (ngModelChange)="seed.set($event); reseed()">
+                <option value="factory">Factory Autopilot</option>
+                <option value="random">Random</option>
+                @for (b of domainBrains(); track b.id) {
+                  <option [value]="b.id">{{ b.name }}</option>
+                }
+              </select>
+            </div>
+            <form class="row" (submit)="$event.preventDefault(); saveBrain()">
+              <label class="sr-only" for="mw-name">Brain name</label>
+              <input id="mw-name" class="input grow" name="mwName" autocomplete="off" placeholder="e.g. M1 Menace…" [ngModel]="brainName()" (ngModelChange)="brainName.set($event)" />
+              <button class="btn btn--sm" type="submit"><app-icon name="save" [size]="16" />Save Brain</button>
+            </form>
+          </section>
+        }
+      }
+    </div>
+  </aside>
+</div>
+<p class="sr-only" aria-live="polite">{{ status() }}</p>

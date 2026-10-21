@@ -1,0 +1,428 @@
+/**
+ * Terra Depot — the idle/clicker economy. Pure functions over a plain state object,
+ * shared verbatim by the browser, the Azure Function (offline settlement) and the tests.
+ * The .NET API mirrors `offlineEarnings` + `coinsPerSecond` for server authority.
+ */
+
+export const SAVE_VERSION = 1;
+
+/** Fleet assets (Cookie Clicker "buildings"). Cost grows ×1.15 per unit owned. */
+export const GENERATORS = [
+  { id: 'bike', name: 'Courier Bike', baseCost: 15, cps: 0.1, mode: 'road', blurb: 'Pedal power. Zero emissions, maximum calf.' },
+  { id: 'van', name: 'Delivery Van', baseCost: 100, cps: 1, mode: 'road', blurb: 'Holds 40 parcels and one very old meat pie.' },
+  { id: 'ute', name: 'Self-Driving Ute', baseCost: 1_100, cps: 8, mode: 'road', blurb: 'Trained on roads you built. Mostly stays on them.' },
+  { id: 'truck', name: 'B-Double Truck', baseCost: 12_000, cps: 47, mode: 'road', blurb: 'Two trailers. One driver who insists on Slim Dusty.' },
+  { id: 'drone', name: 'Parcel Drone Swarm', baseCost: 130_000, cps: 260, mode: 'air', blurb: 'Avoids magpies about 80% of the time.' },
+  { id: 'plane', name: 'Freighter Jet', baseCost: 1_400_000, cps: 1_400, mode: 'air', blurb: 'Brisbane to Nadi before your flat white goes cold.' },
+  { id: 'ship', name: 'Container Ship', baseCost: 20_000_000, cps: 7_800, mode: 'sea', blurb: 'Six thousand boxes. One very patient crane.' },
+  { id: 'terminal', name: 'Automated Terminal', baseCost: 330_000_000, cps: 44_000, mode: 'sea', blurb: 'Robots stacking boxes for other robots.' },
+  { id: 'hyperloop', name: 'Hyperloop Pod', baseCost: 5_100_000_000, cps: 260_000, mode: 'road', blurb: 'Brisbane to Sydney in 37 minutes. Allegedly.' },
+];
+
+/**
+ * One-time upgrades. `req` is checked against state; `effect` is applied in `coinsPerSecond`/`clickValue`.
+ * @type {{id:string,name:string,cost:number,blurb:string,req:(s:any)=>boolean,effect:{type:string,target?:string,mult?:number,hours?:number,rate?:number}}[]}
+ */
+export const UPGRADES = [
+  { id: 'panniers', name: 'Cargo Panniers', cost: 100, blurb: 'Bikes deliver twice as much.', req: (s) => owned(s, 'bike') >= 1, effect: { type: 'gen', target: 'bike', mult: 2 } },
+  { id: 'hydraulic-stamp', name: 'Hydraulic Stamp', cost: 500, blurb: 'Every Dispatch click counts double.', req: () => true, effect: { type: 'click', mult: 2 } },
+  { id: 'parcel-tetris', name: 'Parcel Tetris', cost: 1_000, blurb: 'Vans pack twice as tight.', req: (s) => owned(s, 'van') >= 1, effect: { type: 'gen', target: 'van', mult: 2 } },
+  { id: 'lidar', name: 'Lidar Retrofit', cost: 11_000, blurb: 'Utes see further, earn ×2.', req: (s) => owned(s, 'ute') >= 1, effect: { type: 'gen', target: 'ute', mult: 2 } },
+  { id: 'night-shift', name: 'Night Shift', cost: 20_000, blurb: 'Offline earnings cap +4 hours.', req: () => true, effect: { type: 'offlineCap', hours: 4 } },
+  { id: 'neural-dispatch', name: 'Neural Dispatch', cost: 50_000, blurb: 'Your trained brains route the fleet: all earnings ×1.5. Needs 5 trained generations.', req: (s) => s.stats.generations >= 5, effect: { type: 'all', mult: 1.5 } },
+  { id: 'golden-stamp', name: 'Gold-Plated Stamp', cost: 50_000, blurb: 'Clicks also earn 1% of your coins per second.', req: (s) => s.clicks >= 100, effect: { type: 'clickCps', rate: 0.01 } },
+  { id: 'green-diesel', name: 'Renewable Diesel', cost: 75_000, blurb: 'All earnings ×1.1 and 20% less CO₂ on the dashboard.', req: () => true, effect: { type: 'all', mult: 1.1 } },
+  { id: 'slim-dusty', name: 'Slim Dusty Playlist', cost: 120_000, blurb: 'Truckies drive happier: trucks ×2.', req: (s) => owned(s, 'truck') >= 1, effect: { type: 'gen', target: 'truck', mult: 2 } },
+  { id: 'mezzanine', name: 'Warehouse Mezzanine', cost: 250_000, blurb: 'Offline efficiency 50% → 75%.', req: () => true, effect: { type: 'offlineRate', rate: 0.75 } },
+  { id: 'parcel-spotter', name: 'Priority Parcel Spotter', cost: 400_000, blurb: 'Golden parcels show up twice as often.', req: () => true, effect: { type: 'golden', mult: 2 } },
+  { id: 'magpie-radar', name: 'Magpie Radar', cost: 1_300_000, blurb: 'Drones ×2. Swooping season survived.', req: (s) => owned(s, 'drone') >= 1, effect: { type: 'gen', target: 'drone', mult: 2 } },
+  { id: 'olympics', name: '2032 Games Contract', cost: 10_000_000, blurb: 'Brisbane hosts, you deliver: all earnings ×2.', req: (s) => s.lifetime >= 5_000_000, effect: { type: 'all', mult: 2 } },
+  { id: 'jet-stream', name: 'Jet Stream Routing', cost: 14_000_000, blurb: 'Freighter jets ×2.', req: (s) => owned(s, 'plane') >= 1, effect: { type: 'gen', target: 'plane', mult: 2 } },
+  { id: 'autopilot', name: 'Full Self-Delivery', cost: 25_000_000, blurb: 'Offline efficiency → 100%. Needs 100 AI deliveries.', req: (s) => totalDeliveries(s) >= 100, effect: { type: 'offlineRate', rate: 1 } },
+  { id: 'twin-lift', name: 'Twin-Lift Gantry Cranes', cost: 200_000_000, blurb: 'Container ships ×2.', req: (s) => owned(s, 'ship') >= 1, effect: { type: 'gen', target: 'ship', mult: 2 } },
+];
+
+export const COSMETICS = {
+  skins: [
+    { id: 'ute', name: 'Bne Ute', cost: 0 },
+    { id: 'minit', name: 'Mini T', cost: 1_500 },
+    { id: 'taxi', name: 'Black & Gold Cab', cost: 6_000 },
+    { id: 'kombi', name: 'Surf Kombi', cost: 25_000 },
+    { id: 'ink', name: 'Inked Variant #1', cost: 120_000 },
+    { id: 'holo', name: 'Holo Foil', cost: 750_000 },
+  ],
+  homes: [
+    { id: 'queenslander', name: 'Queenslander', cost: 0 },
+    { id: 'terrace', name: 'Gable Terrace', cost: 2_000 },
+    { id: 'brutalist', name: 'Brutalist Block', cost: 40_000 },
+    { id: 'glass', name: 'Glass Tower', cost: 300_000 },
+    { id: 'pop', name: 'Halftone Pop', cost: 2_000_000 },
+  ],
+  maps: [
+    { id: 'brisbane', name: 'Brisbane CBD', cost: 0 },
+    { id: 'sandbox', name: 'Blank Sandbox', cost: 0 },
+    { id: 'goldcoast', name: 'Surfers Paradise', cost: 5_000 },
+    { id: 'sydney', name: 'Sydney CBD', cost: 250_000 },
+    { id: 'melbourne', name: 'Melbourne Hoddle Grid', cost: 5_000_000 },
+  ],
+};
+
+/** Ops floor facilities. Each level adds +4% to all earnings (and more trucks, cranes, stands). */
+export const FACILITIES = [
+  { id: 'EFD', name: 'Eagle Farm DC', kind: 'warehouse', baseCost: 5_000, blurb: 'More dock doors and a second shed.' },
+  { id: 'ACR', name: 'Acacia Ridge Intermodal', kind: 'warehouse', baseCost: 8_000, blurb: 'Rail sidings and cross-dock lanes.' },
+  { id: 'YTL', name: 'Yatala Distribution', kind: 'warehouse', baseCost: 12_000, blurb: 'Cold chain for the Gold Coast run.' },
+  { id: 'BNEC', name: 'Brisbane Airport Cargo', kind: 'airport', baseCost: 25_000, blurb: 'Extra freighter stands and a bigger ULD shed.' },
+  { id: 'PBNE', name: 'Port of Brisbane', kind: 'seaport', baseCost: 40_000, blurb: 'Another gantry crane on the quay.' },
+];
+export const MAX_FACILITY_LEVEL = 5;
+
+export function facilityCost(id, level) {
+  const f = FACILITIES.find((x) => x.id === id);
+  return f ? f.baseCost * 4 ** (level - 1) : Infinity;
+}
+
+export function upgradeFacility(state, id) {
+  const f = FACILITIES.find((x) => x.id === id);
+  if (!f) return { ok: false, state, reason: 'Unknown facility.' };
+  const level = state.facilities[id] ?? 1;
+  if (level >= MAX_FACILITY_LEVEL) return { ok: false, state, reason: `${f.name} is fully expanded.` };
+  const cost = facilityCost(id, level);
+  if (cost > state.coins) return { ok: false, state, reason: `Needs ${Math.ceil(cost - state.coins)} more coins.`, cost };
+  return { ok: true, cost, state: { ...state, coins: state.coins - cost, facilities: { ...state.facilities, [id]: level + 1 } } };
+}
+
+const ISLANDS = new Set(['LDH', 'NLK', 'NOU', 'VLI', 'NAN', 'HIR', 'TBU', 'LDHP', 'NLKP', 'NOUP', 'VILP', 'SUVA', 'HONP', 'TANG', 'DUNW']);
+
+export const ACHIEVEMENTS = [
+  { id: 'first-delivery', name: 'Signed, Sealed', blurb: 'Complete your first AI delivery.', check: (s) => totalDeliveries(s) >= 1 },
+  { id: 'gen-10', name: 'Survival of the Fittest', blurb: 'Train 10 generations.', check: (s) => s.stats.generations >= 10 },
+  { id: 'road-crew', name: 'Road Crew', blurb: 'Build 25 road segments.', check: (s) => s.stats.segmentsBuilt >= 25 },
+  { id: 'bay-pilot', name: 'Bay Pilot', blurb: 'Sail a ship to Tangalooma.', check: (s) => s.stats.destinations.includes('TANG') },
+  { id: 'island-hopper', name: 'Island Hopper', blurb: 'Deliver to 5 different islands.', check: (s) => s.stats.destinations.filter((d) => ISLANDS.has(d)).length >= 5 },
+  { id: 'overtaker', name: 'M1 Menace', blurb: 'Overtake 25 cars on the motorway.', check: (s) => s.stats.bestOvertakes >= 25 },
+  { id: 'clicker', name: 'Stamp Collector', blurb: 'Click Dispatch 1,000 times.', check: (s) => s.clicks >= 1_000 },
+  { id: 'millionaire', name: 'Millionaire Mover', blurb: 'Earn 1,000,000 coins in total.', check: (s) => s.lifetime >= 1_000_000 },
+  { id: 'night-owl', name: 'Night Owl', blurb: 'Collect offline earnings.', check: (s) => s.stats.offlineClaims >= 1 },
+  { id: 'fashion', name: 'Variant Cover', blurb: 'Equip a non-default car skin.', check: (s) => s.equipped.skin !== 'ute' },
+  { id: 'golden', name: 'Priority Lane', blurb: 'Catch a golden parcel.', check: (s) => s.stats.goldenCaught >= 1 },
+  { id: 'franchise', name: 'Franchisee', blurb: 'Franchise your depot once.', check: (s) => s.tokens > 0 },
+];
+
+export const BASE_OFFLINE_HOURS = 2;
+export const BASE_OFFLINE_RATE = 0.5;
+export const FRANCHISE_MIN = 10_000_000;
+
+function owned(s, id) {
+  return s.generators[id] ?? 0;
+}
+
+export function totalDeliveries(s) {
+  const d = s.stats.deliveries;
+  return d.road + d.air + d.sea;
+}
+
+/**
+ * @typedef {{
+ *   version: number, coins: number, lifetime: number, lifetimeAllTime: number, clicks: number, tokens: number,
+ *   generators: Record<string, number>, upgrades: string[],
+ *   owned: { skins: string[], homes: string[], maps: string[] },
+ *   equipped: { skin: string, home: string, map: string },
+ *   achievements: string[], frenzyUntil: number, frenzyMult: number, lastSeen: number, createdAt: number,
+ *   facilities: Record<string, number>,
+ *   stats: { deliveries: { road: number, air: number, sea: number }, generations: number, segmentsBuilt: number, crashes: number,
+ *            destinations: string[], bestOvertakes: number, offlineClaims: number, goldenCaught: number }
+ * }} GameState
+ */
+
+/**
+ * @param {number} now epoch ms
+ * @returns {GameState}
+ */
+export function initialState(now = Date.now()) {
+  return {
+    version: SAVE_VERSION,
+    coins: 0,
+    lifetime: 0,
+    lifetimeAllTime: 0,
+    clicks: 0,
+    tokens: 0,
+    generators: Object.fromEntries(GENERATORS.map((g) => [g.id, 0])),
+    upgrades: [],
+    owned: { skins: ['ute'], homes: ['queenslander'], maps: ['brisbane', 'sandbox'] },
+    equipped: { skin: 'ute', home: 'queenslander', map: 'brisbane' },
+    achievements: [],
+    facilities: Object.fromEntries(FACILITIES.map((f) => [f.id, 1])),
+    frenzyUntil: 0,
+    frenzyMult: 1,
+    lastSeen: now,
+    createdAt: now,
+    stats: {
+      deliveries: { road: 0, air: 0, sea: 0 },
+      generations: 0,
+      segmentsBuilt: 0,
+      crashes: 0,
+      destinations: [],
+      bestOvertakes: 0,
+      offlineClaims: 0,
+      goldenCaught: 0,
+    },
+  };
+}
+
+/** Repairs/migrates untrusted saves (localStorage, imports, API). Never throws. */
+export function normalizeState(raw, now = Date.now()) {
+  const base = initialState(now);
+  if (!raw || typeof raw !== 'object') return base;
+  const num = (v, d = 0) => (Number.isFinite(v) && v >= 0 ? v : d);
+  const arr = (v, allowed) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && (!allowed || allowed.includes(x))) : []);
+  const s = { ...base };
+  s.coins = num(raw.coins);
+  s.lifetime = num(raw.lifetime, s.coins);
+  s.lifetimeAllTime = Math.max(num(raw.lifetimeAllTime), s.lifetime);
+  s.clicks = num(raw.clicks);
+  s.tokens = Math.floor(num(raw.tokens));
+  s.generators = Object.fromEntries(GENERATORS.map((g) => [g.id, Math.floor(num(raw.generators?.[g.id]))]));
+  s.upgrades = arr(raw.upgrades, UPGRADES.map((u) => u.id));
+  const ids = (k) => COSMETICS[k].map((c) => c.id);
+  s.owned = {
+    skins: [...new Set(['ute', ...arr(raw.owned?.skins, ids('skins'))])],
+    homes: [...new Set(['queenslander', ...arr(raw.owned?.homes, ids('homes'))])],
+    maps: [...new Set(['brisbane', 'sandbox', ...arr(raw.owned?.maps, ids('maps'))])],
+  };
+  s.equipped = {
+    skin: s.owned.skins.includes(raw.equipped?.skin) ? raw.equipped.skin : 'ute',
+    home: s.owned.homes.includes(raw.equipped?.home) ? raw.equipped.home : 'queenslander',
+    map: s.owned.maps.includes(raw.equipped?.map) ? raw.equipped.map : 'brisbane',
+  };
+  s.achievements = arr(raw.achievements, ACHIEVEMENTS.map((a) => a.id));
+  s.facilities = Object.fromEntries(FACILITIES.map((f) => [f.id, Math.min(MAX_FACILITY_LEVEL, Math.max(1, Math.floor(num(raw.facilities?.[f.id], 1))))]));
+  s.frenzyUntil = num(raw.frenzyUntil);
+  s.frenzyMult = num(raw.frenzyMult, 1) || 1;
+  s.lastSeen = Math.min(num(raw.lastSeen, now), now);
+  s.createdAt = num(raw.createdAt, now);
+  const st = raw.stats ?? {};
+  s.stats = {
+    deliveries: { road: num(st.deliveries?.road), air: num(st.deliveries?.air), sea: num(st.deliveries?.sea) },
+    generations: num(st.generations),
+    segmentsBuilt: num(st.segmentsBuilt),
+    crashes: num(st.crashes),
+    destinations: arr(st.destinations).slice(0, 64),
+    bestOvertakes: num(st.bestOvertakes),
+    offlineClaims: num(st.offlineClaims),
+    goldenCaught: num(st.goldenCaught),
+  };
+  return s;
+}
+
+export function generatorCost(id, ownedCount, qty = 1) {
+  const g = GENERATORS.find((x) => x.id === id);
+  if (!g) return Infinity;
+  // geometric series: base * 1.15^n * (1.15^qty - 1) / 0.15
+  return Math.ceil((g.baseCost * 1.15 ** ownedCount * (1.15 ** qty - 1)) / 0.15);
+}
+
+export function maxAffordable(state, id) {
+  let qty = 0;
+  while (qty < 1000 && generatorCost(id, owned(state, id), qty + 1) <= state.coins) qty++;
+  return qty;
+}
+
+function upgradeEffects(state) {
+  return UPGRADES.filter((u) => state.upgrades.includes(u.id)).map((u) => u.effect);
+}
+
+/** Coins per second for one generator type, after upgrades (excludes global multipliers). */
+export function generatorCps(state, id) {
+  const g = GENERATORS.find((x) => x.id === id);
+  if (!g) return 0;
+  let mult = 1;
+  for (const e of upgradeEffects(state)) if (e.type === 'gen' && e.target === id) mult *= e.mult ?? 1;
+  return g.cps * owned(state, id) * mult;
+}
+
+export function globalMultiplier(state, now = Date.now()) {
+  let mult = 1 + state.tokens * 0.02;
+  for (const e of upgradeEffects(state)) if (e.type === 'all') mult *= e.mult ?? 1;
+  mult *= 1 + state.achievements.length * 0.01;
+  for (const f of FACILITIES) mult *= 1 + ((state.facilities?.[f.id] ?? 1) - 1) * 0.04;
+  if (now < state.frenzyUntil) mult *= state.frenzyMult || 1;
+  return mult;
+}
+
+export function coinsPerSecond(state, now = Date.now()) {
+  let base = 0;
+  for (const g of GENERATORS) base += generatorCps(state, g.id);
+  return base * globalMultiplier(state, now);
+}
+
+export function clickValue(state, now = Date.now()) {
+  let value = 1;
+  let cpsShare = 0;
+  for (const e of upgradeEffects(state)) {
+    if (e.type === 'click') value *= e.mult ?? 1;
+    if (e.type === 'clickCps') cpsShare += e.rate ?? 0;
+  }
+  return value * (1 + state.tokens * 0.02) + coinsPerSecond(state, now) * cpsShare;
+}
+
+export function offlineCapHours(state) {
+  let hours = BASE_OFFLINE_HOURS;
+  for (const e of upgradeEffects(state)) if (e.type === 'offlineCap') hours += e.hours ?? 0;
+  return hours;
+}
+
+export function offlineRate(state) {
+  let rate = BASE_OFFLINE_RATE;
+  for (const e of upgradeEffects(state)) if (e.type === 'offlineRate') rate = Math.max(rate, e.rate ?? 0);
+  return rate;
+}
+
+export function goldenChanceMultiplier(state) {
+  let m = 1;
+  for (const e of upgradeEffects(state)) if (e.type === 'golden') m *= e.mult ?? 1;
+  return m;
+}
+
+/**
+ * What the fleet earned while the tab was closed.
+ * @returns {{seconds:number, cappedSeconds:number, earned:number, rate:number, capHours:number}}
+ */
+export function offlineEarnings(state, now = Date.now()) {
+  const seconds = Math.max(0, (now - state.lastSeen) / 1000);
+  const capHours = offlineCapHours(state);
+  const cappedSeconds = Math.min(seconds, capHours * 3600);
+  const rate = offlineRate(state);
+  // frenzy never applies offline
+  const cps = coinsPerSecond({ ...state, frenzyUntil: 0 }, now);
+  return { seconds, cappedSeconds, earned: cps * cappedSeconds * rate, rate, capHours };
+}
+
+function earn(state, amount) {
+  return { ...state, coins: state.coins + amount, lifetime: state.lifetime + amount, lifetimeAllTime: state.lifetimeAllTime + amount };
+}
+
+export function applyOffline(state, now = Date.now()) {
+  const off = offlineEarnings(state, now);
+  let next = earn(state, off.earned);
+  next = { ...next, lastSeen: now };
+  if (off.earned > 0 && off.seconds > 60) next = { ...next, stats: { ...next.stats, offlineClaims: next.stats.offlineClaims + 1 } };
+  return { state: next, ...off };
+}
+
+/** Advances passive income by dt seconds. */
+export function tick(state, dtSeconds, now = Date.now()) {
+  if (dtSeconds <= 0) return state;
+  return { ...earn(state, coinsPerSecond(state, now) * dtSeconds), lastSeen: now };
+}
+
+export function click(state, now = Date.now()) {
+  return { ...earn(state, clickValue(state, now)), clicks: state.clicks + 1 };
+}
+
+/** @returns {{ok:boolean, state:any, reason?:string, cost?:number}} */
+export function buyGenerator(state, id, qty = 1) {
+  if (!GENERATORS.some((g) => g.id === id) || qty < 1) return { ok: false, state, reason: 'Unknown vehicle.' };
+  const cost = generatorCost(id, owned(state, id), qty);
+  if (cost > state.coins) return { ok: false, state, reason: `Needs ${Math.ceil(cost - state.coins)} more coins.`, cost };
+  return { ok: true, cost, state: { ...state, coins: state.coins - cost, generators: { ...state.generators, [id]: owned(state, id) + qty } } };
+}
+
+export function upgradeAvailable(state, id) {
+  const u = UPGRADES.find((x) => x.id === id);
+  return !!u && !state.upgrades.includes(id) && u.req(state);
+}
+
+export function buyUpgrade(state, id) {
+  const u = UPGRADES.find((x) => x.id === id);
+  if (!u) return { ok: false, state, reason: 'Unknown upgrade.' };
+  if (state.upgrades.includes(id)) return { ok: false, state, reason: 'Already owned.' };
+  if (!u.req(state)) return { ok: false, state, reason: 'Requirements not met yet.' };
+  if (u.cost > state.coins) return { ok: false, state, reason: `Needs ${Math.ceil(u.cost - state.coins)} more coins.`, cost: u.cost };
+  return { ok: true, cost: u.cost, state: { ...state, coins: state.coins - u.cost, upgrades: [...state.upgrades, id] } };
+}
+
+/** @param {'skins'|'homes'|'maps'} kind */
+export function buyCosmetic(state, kind, id) {
+  const item = COSMETICS[kind]?.find((c) => c.id === id);
+  if (!item) return { ok: false, state, reason: 'Unknown item.' };
+  if (state.owned[kind].includes(id)) return { ok: false, state, reason: 'Already owned.' };
+  if (item.cost > state.coins) return { ok: false, state, reason: `Needs ${Math.ceil(item.cost - state.coins)} more coins.`, cost: item.cost };
+  return { ok: true, cost: item.cost, state: { ...state, coins: state.coins - item.cost, owned: { ...state.owned, [kind]: [...state.owned[kind], id] } } };
+}
+
+/** @param {'skin'|'home'|'map'} slot */
+export function equip(state, slot, id) {
+  const kind = slot === 'skin' ? 'skins' : slot === 'home' ? 'homes' : 'maps';
+  if (!state.owned[kind].includes(id)) return { ok: false, state, reason: 'Buy it first.' };
+  return { ok: true, state: { ...state, equipped: { ...state.equipped, [slot]: id } } };
+}
+
+/**
+ * Coins for a simulation event. Real AI deliveries pay well; training deliveries pay a little.
+ * @param {{type:string, mode?:'road'|'air'|'sea', distance?:number, training?:boolean}} event
+ */
+export function rewardFor(state, event, now = Date.now()) {
+  if (event.type !== 'delivery' || !event.mode) return 0;
+  const flat = { road: 5, sea: 25, air: 40 }[event.mode] ?? 5;
+  const cpsBonus = coinsPerSecond(state, now) * 10;
+  const value = (flat + cpsBonus) * (1 + state.tokens * 0.02);
+  return event.training ? value * 0.2 : value;
+}
+
+export function recordEvent(state, event, now = Date.now()) {
+  let next = state;
+  const st = { ...state.stats, deliveries: { ...state.stats.deliveries } };
+  if (event.type === 'delivery' && event.mode) {
+    st.deliveries[event.mode]++;
+    if (event.to && !st.destinations.includes(event.to)) st.destinations = [...st.destinations, event.to];
+    next = earn(next, rewardFor(state, event, now));
+  }
+  if (event.type === 'crash') st.crashes++;
+  if (event.type === 'generation') st.generations++;
+  if (event.type === 'segment') st.segmentsBuilt += event.count ?? 1;
+  if (event.type === 'overtakes') st.bestOvertakes = Math.max(st.bestOvertakes, event.count ?? 0);
+  return { ...next, stats: st };
+}
+
+/** Golden parcel: frenzy (×7 for 30 s) or a lucky lump sum. */
+export function catchGolden(state, now = Date.now(), roll = Math.random()) {
+  const stats = { ...state.stats, goldenCaught: state.stats.goldenCaught + 1 };
+  if (roll < 0.5) {
+    return { kind: 'frenzy', amount: 0, state: { ...state, stats, frenzyUntil: now + 30_000, frenzyMult: 7 } };
+  }
+  const amount = Math.min(state.coins * 0.15, coinsPerSecond(state, now) * 900) + 13;
+  return { kind: 'lucky', amount, state: { ...earn(state, amount), stats } };
+}
+
+/** Newly unlocked achievement ids. */
+export function checkAchievements(state) {
+  return ACHIEVEMENTS.filter((a) => !state.achievements.includes(a.id) && a.check(state)).map((a) => a.id);
+}
+
+export function franchiseTokens(state) {
+  return Math.floor(Math.sqrt(state.lifetimeAllTime / 1_000_000));
+}
+
+export function canFranchise(state) {
+  return state.lifetime >= FRANCHISE_MIN && franchiseTokens(state) > state.tokens;
+}
+
+/** Prestige: reset vehicles/upgrades/coins for permanent +2% per token. Cosmetics and stats survive. */
+export function franchise(state, now = Date.now()) {
+  if (!canFranchise(state)) return { ok: false, state, reason: `Earn ${FRANCHISE_MIN.toLocaleString()} coins this run first.` };
+  const fresh = initialState(now);
+  return {
+    ok: true,
+    state: {
+      ...fresh,
+      tokens: franchiseTokens(state),
+      lifetimeAllTime: state.lifetimeAllTime,
+      owned: state.owned,
+      equipped: state.equipped,
+      achievements: state.achievements,
+      stats: state.stats,
+      createdAt: state.createdAt,
+    },
+  };
+}

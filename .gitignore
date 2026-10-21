@@ -1,0 +1,34 @@
+# dependencies & builds
+node_modules/
+web/dist/
+web/.angular/
+web/out-tsc/
+**/bin/
+**/obj/
+
+# local databases & test output
+*.db
+*.db-shm
+*.db-wal
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+api/**/TestResults/
+
+# terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/tfplan
+infra/terraform/backend.hcl
+infra/terraform/terraform.tfvars
+
+# secrets & local settings
+.env
+functions/local.settings.json
+
+# OS / editors
+.DS_Store
+*.swp
+.idea/
+tools/node_modules/

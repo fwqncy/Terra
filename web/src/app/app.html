@@ -1,0 +1,10 @@
+<a class="skip-link" href="#main" (click)="skipToContent($event)">Skip to content</a>
+<app-top-bar (openPalette)="palette.open()" />
+<main #main id="main" tabindex="-1">
+  <router-outlet />
+</main>
+<app-toaster />
+<app-command-palette #palette />
+<app-offline-modal />
+<app-golden-parcel />
+<app-confirm-host />

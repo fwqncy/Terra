@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+
+.dash {
+  padding-block: 24px 64px;
+}
+
+.dash-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+h1 {
+  margin-top: 6px;
+  font-size: clamp(40px, 6vw, 72px);
+}
+
+.head-tools {
+  gap: 10px;
+}
+
+.segmented button[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.filters {
+  gap: 10px;
+  margin: 16px 0 4px;
+}
+
+.tab-body {
+  margin-top: 16px;
+}

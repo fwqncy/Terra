@@ -1,0 +1,154 @@
+# Terra full stack: Angular (nginx) · .NET API · SQL Server · MongoDB · WordPress (PHP) + MariaDB
+#   docker compose up --build                      → app on http://localhost:8081
+#   docker compose --profile serverless up --build → also runs the Azure Functions + Azurite
+name: terra
+
+x-sql-password: &sql-password ${SQL_SA_PASSWORD:-Terra-Local-Dev-1!}
+x-wp-db: &wp-db
+  WORDPRESS_DB_HOST: wordpress-db
+  WORDPRESS_DB_USER: wordpress
+  WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:-wordpress-local}
+  WORDPRESS_DB_NAME: wordpress
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64 # Apple silicon: enable Rosetta/x86 emulation in Docker Desktop or Colima
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: *sql-password
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Database__Provider: SqlServer
+      ConnectionStrings__Sql: "Server=sqlserver,1433;Database=Terra;User Id=sa;Password=${SQL_SA_PASSWORD:-Terra-Local-Dev-1!};TrustServerCertificate=True"
+      ConnectionStrings__Mongo: mongodb://mongo:27017
+      WordPress__BaseUrl: http://wordpress
+      App__PublicUrl: http://localhost:8081
+      Cors__Origins__0: http://localhost:8081
+      Cors__Origins__1: http://localhost:4200
+      Webhooks__PowerAutomateUrl: ${POWER_AUTOMATE_URL:-}
+      Webhooks__Secret: ${WEBHOOK_SECRET:-local-dev-secret}
+    ports:
+      - "5080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports:
+      - "8081:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # MariaDB locally (wp-cli's client speaks its auth natively); Azure uses MySQL Flexible Server.
+  wordpress-db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: ${WP_DB_PASSWORD:-wordpress-local}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - wpdb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  wordpress:
+    image: wordpress:6.8-php8.3-apache
+    environment:
+      <<: *wp-db
+    ports:
+      - "8080:80"
+    volumes:
+      - wpdata:/var/www/html
+      - ./wordpress/terra-fleet:/var/www/html/wp-content/plugins/terra-fleet:ro
+    depends_on:
+      wordpress-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # One-shot: installs WordPress, activates Terra Fleet and seeds the Dispatch posts.
+  wordpress-setup:
+    image: wordpress:cli-php8.3
+    user: "33:33"
+    environment:
+      <<: *wp-db
+      WP_SITE_URL: http://localhost:8080
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD:-change-me-locally}
+      TERRA_API_INTERNAL_URL: http://api:8080
+      TERRA_APP_URL: http://localhost:8081
+    volumes:
+      - wpdata:/var/www/html
+      - ./wordpress/terra-fleet:/var/www/html/wp-content/plugins/terra-fleet:ro
+      - ./wordpress/setup.sh:/setup.sh:ro
+    entrypoint: ["sh", "/setup.sh"]
+    depends_on:
+      - wordpress
+    restart: "no"
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    profiles: ["serverless"]
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck
+    ports:
+      - "10000-10002:10000-10002" # also serves `func start` on the host
+
+  functions:
+    build: ./functions
+    platform: linux/amd64 # the Functions host image is x86-only
+    profiles: ["serverless"]
+    environment:
+      AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      FUNCTIONS_WORKER_RUNTIME: node
+      TERRA_API_URL: http://api:8080
+      COSMOS_MONGO_CONNECTION: mongodb://mongo:27017
+      COSMOS_DATABASE: terra
+      WORDPRESS_URL: http://wordpress
+      POWER_AUTOMATE_URL: ${POWER_AUTOMATE_URL:-}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-local-dev-secret}
+    ports:
+      - "7071:80"
+    depends_on:
+      - azurite
+      - api
+      - mongo
+
+volumes:
+  sqldata:
+  mongodata:
+  wpdb:
+  wpdata:

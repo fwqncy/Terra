@@ -1,0 +1,1305 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Terra Logistics",
+    "description": "Live Brisbane logistics network from the Terra sim: KPIs, shipments, expediting and the depot leaderboard.",
+    "version": "v1",
+    "x-ms-api-annotation": {
+      "status": "Preview"
+    }
+  },
+  "paths": {
+    "/api/brains": {
+      "post": {
+        "tags": [
+          "Brains"
+        ],
+        "summary": "Store a trained neural network as a document",
+        "operationId": "SaveBrain",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/JsonNode"
+              }
+            },
+            "x-ms-summary": "Body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "description": "Store a trained neural network as a document",
+        "x-ms-visibility": "internal"
+      },
+      "get": {
+        "tags": [
+          "Brains"
+        ],
+        "operationId": "ListBrains",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "domain",
+            "type": "string",
+            "x-ms-summary": "Domain"
+          },
+          {
+            "in": "query",
+            "name": "take",
+            "type": "integer",
+            "format": "int32",
+            "x-ms-summary": "Take"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/BrainSummary"
+              }
+            }
+          }
+        },
+        "summary": "List trained brains",
+        "description": "List trained brains",
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/api/brains/{id}": {
+      "get": {
+        "tags": [
+          "Brains"
+        ],
+        "operationId": "GetBrain",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Get Brain",
+        "description": "Get Brain",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/cms/posts": {
+      "get": {
+        "tags": [
+          "CMS"
+        ],
+        "summary": "Dispatches from the WordPress headless CMS (empty when not configured)",
+        "operationId": "GetDispatches",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "description": "Dispatches from the WordPress headless CMS (empty when not configured)",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/game/{playerId}": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "summary": "A player's save plus server-computed offline earnings",
+        "operationId": "GetGame",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playerId",
+            "required": true,
+            "type": "string",
+            "format": "uuid",
+            "x-ms-summary": "Player Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "description": "A player's save plus server-computed offline earnings",
+        "x-ms-visibility": "internal"
+      },
+      "put": {
+        "tags": [
+          "Game"
+        ],
+        "summary": "Store a save after a server-side plausibility check",
+        "operationId": "SyncGame",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playerId",
+            "required": true,
+            "type": "string",
+            "format": "uuid",
+            "x-ms-summary": "Player Id"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GameSyncRequest"
+            },
+            "x-ms-summary": "Body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "description": "Store a save after a server-side plausibility check",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "tags": [
+          "Game"
+        ],
+        "operationId": "GetLeaderboard",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "take",
+            "type": "integer",
+            "format": "int32",
+            "x-ms-summary": "Take"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/LeaderRow"
+              }
+            }
+          }
+        },
+        "summary": "Get leaderboard",
+        "description": "Get leaderboard",
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/api/webhooks/test": {
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "operationId": "TestWebhook",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Test Webhook",
+        "description": "Test Webhook",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/logistics/snapshot": {
+      "get": {
+        "tags": [
+          "Logistics"
+        ],
+        "summary": "Get network snapshot",
+        "operationId": "GetLogisticsSnapshot",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Snapshot"
+            }
+          }
+        },
+        "description": "Get network snapshot",
+        "x-ms-visibility": "important"
+      }
+    },
+    "/api/logistics/shipments": {
+      "get": {
+        "tags": [
+          "Logistics"
+        ],
+        "summary": "Find shipments",
+        "operationId": "QueryShipments",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "type": "string",
+            "x-ms-summary": "Status",
+            "enum": [
+              "Active",
+              "Booked",
+              "In Transit",
+              "At Hub",
+              "Delayed",
+              "Exception",
+              "Delivered"
+            ]
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "type": "string",
+            "x-ms-summary": "Mode",
+            "enum": [
+              "road",
+              "air",
+              "sea"
+            ]
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "type": "string",
+            "x-ms-summary": "Q"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "type": "string",
+            "x-ms-summary": "Sort"
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "type": "string",
+            "x-ms-summary": "Dir"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "type": "integer",
+            "format": "int32",
+            "x-ms-summary": "Page"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "type": "integer",
+            "format": "int32",
+            "x-ms-summary": "Page Size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/ShipmentPageResponse"
+            }
+          }
+        },
+        "description": "Find shipments",
+        "x-ms-visibility": "important"
+      }
+    },
+    "/api/logistics/shipments/{id}/expedite": {
+      "post": {
+        "tags": [
+          "Logistics"
+        ],
+        "operationId": "ExpediteShipment",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Shipment"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "summary": "Expedite a shipment",
+        "description": "Expedite a shipment",
+        "x-ms-visibility": "important"
+      }
+    },
+    "/api/players/{id}": {
+      "put": {
+        "tags": [
+          "Players"
+        ],
+        "operationId": "UpsertPlayer",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string",
+            "format": "uuid",
+            "x-ms-summary": "Id"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PlayerRequest"
+            },
+            "x-ms-summary": "Body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Upsert Player",
+        "description": "Upsert Player",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Check API health",
+        "operationId": "GetHealth",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/HealthResponse"
+            }
+          }
+        },
+        "description": "Check API health",
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/api/telemetry": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "IngestTelemetry",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TelemetryRequest"
+            },
+            "x-ms-summary": "Body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Ingest Telemetry",
+        "description": "Ingest Telemetry",
+        "x-ms-visibility": "internal"
+      }
+    },
+    "/api/worlds/{playerId}/{mapId}": {
+      "put": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "SaveWorld",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playerId",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Player Id"
+          },
+          {
+            "in": "path",
+            "name": "mapId",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Map Id"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/JsonNode"
+              }
+            },
+            "x-ms-summary": "Body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Save World",
+        "description": "Save World",
+        "x-ms-visibility": "internal"
+      },
+      "get": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "GetWorld",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playerId",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Player Id"
+          },
+          {
+            "in": "path",
+            "name": "mapId",
+            "required": true,
+            "type": "string",
+            "x-ms-summary": "Map Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Get World",
+        "description": "Get World",
+        "x-ms-visibility": "internal"
+      }
+    }
+  },
+  "definitions": {
+    "BrainSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "map": {
+          "type": "string"
+        },
+        "generation": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "fitness": {
+          "format": "double",
+          "type": "number"
+        },
+        "savedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "player": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CarrierRow": {
+      "type": "object",
+      "properties": {
+        "carrier": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "volume": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "delivered": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "onTime": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "cost": {
+          "format": "double",
+          "type": "number"
+        },
+        "tkm": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2": {
+          "format": "double",
+          "type": "number"
+        },
+        "otd": {
+          "format": "double",
+          "type": "number"
+        },
+        "costPerTkm": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2PerTkm": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GameSyncRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/JsonNode"
+          }
+        },
+        "clientTime": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "HealthResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "boolean"
+        },
+        "nosql": {
+          "type": "boolean"
+        },
+        "nosqlKind": {
+          "type": "string"
+        },
+        "time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "cms": {
+          "type": "boolean"
+        },
+        "webhooks": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "HubRow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "lon": {
+          "format": "double",
+          "type": "number"
+        },
+        "lat": {
+          "format": "double",
+          "type": "number"
+        },
+        "capacity": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "occupancy": {
+          "format": "double",
+          "type": "number"
+        },
+        "dockDoorsBusy": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "dockDoors": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "JsonNode": {
+      "type": "object",
+      "properties": {
+        "options": {
+          "$ref": "#/definitions/JsonNodeOptions"
+        },
+        "parent": {
+          "$ref": "#/definitions/JsonNode"
+        },
+        "root": {
+          "$ref": "#/definitions/JsonNode"
+        }
+      },
+      "additionalProperties": false
+    },
+    "JsonNodeOptions": {
+      "type": "object",
+      "properties": {
+        "propertyNameCaseInsensitive": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Kpis": {
+      "type": "object",
+      "properties": {
+        "otd": {
+          "format": "double",
+          "type": "number"
+        },
+        "delivered24h": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "inTransit": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "booked": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "delayed": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "exceptions": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "revenue24h": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2Kg24h": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2PerTkm": {
+          "format": "double",
+          "type": "number"
+        },
+        "costPerKg": {
+          "format": "double",
+          "type": "number"
+        },
+        "avgTransitH": {
+          "$ref": "#/definitions/ModeTriple"
+        },
+        "utilization": {
+          "$ref": "#/definitions/ModeTriple"
+        }
+      },
+      "additionalProperties": false
+    },
+    "LaneRow": {
+      "type": "object",
+      "properties": {
+        "lane": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "volume": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "delivered": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "onTime": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "delayH": {
+          "format": "double",
+          "type": "number"
+        },
+        "revenue": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2": {
+          "format": "double",
+          "type": "number"
+        },
+        "otd": {
+          "format": "double",
+          "type": "number"
+        },
+        "avgDelayH": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "LeaderRow": {
+      "type": "object",
+      "properties": {
+        "rank": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "lifetime": {
+          "format": "double",
+          "type": "number"
+        },
+        "deliveries": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "tokens": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "LogisticsEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "at": {
+          "format": "double",
+          "type": "number"
+        },
+        "type": {
+          "type": "string"
+        },
+        "shipmentId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ModeStat": {
+      "type": "object",
+      "properties": {
+        "delivered": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "tkm": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2Kg": {
+          "format": "double",
+          "type": "number"
+        },
+        "revenue": {
+          "format": "double",
+          "type": "number"
+        },
+        "onTime": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ModeTriple": {
+      "type": "object",
+      "properties": {
+        "road": {
+          "format": "double",
+          "type": "number"
+        },
+        "air": {
+          "format": "double",
+          "type": "number"
+        },
+        "sea": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PlayerRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SeriesPoint": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "format": "double",
+          "type": "number"
+        },
+        "road": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "air": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "sea": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "onTime": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "late": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "co2": {
+          "format": "double",
+          "type": "number"
+        },
+        "revenue": {
+          "format": "double",
+          "type": "number"
+        },
+        "created": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Shipment": {
+      "required": [
+        "carrier",
+        "customer",
+        "destination",
+        "destinationName",
+        "id",
+        "mode",
+        "origin",
+        "unitType"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "destinationName": {
+          "type": "string"
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "customer": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "weightKg": {
+          "format": "double",
+          "type": "number"
+        },
+        "units": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "unitType": {
+          "type": "string"
+        },
+        "distanceKm": {
+          "format": "double",
+          "type": "number"
+        },
+        "createdAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "departAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "etaAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "slaAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "deliveredAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "format": "double",
+          "type": "number"
+        },
+        "costAud": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2Kg": {
+          "format": "double",
+          "type": "number"
+        },
+        "delayReason": {
+          "type": "string"
+        },
+        "delayUntil": {
+          "format": "double",
+          "type": "number"
+        },
+        "onTime": {
+          "type": "boolean"
+        },
+        "expedited": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShipmentDto": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "destinationName": {
+          "type": "string"
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "customer": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "weightKg": {
+          "format": "double",
+          "type": "number"
+        },
+        "units": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "unitType": {
+          "type": "string"
+        },
+        "distanceKm": {
+          "format": "double",
+          "type": "number"
+        },
+        "createdAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "departAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "etaAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "slaAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "deliveredAt": {
+          "format": "double",
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "progress": {
+          "format": "double",
+          "type": "number"
+        },
+        "costAud": {
+          "format": "double",
+          "type": "number"
+        },
+        "co2Kg": {
+          "format": "double",
+          "type": "number"
+        },
+        "delayReason": {
+          "type": "string"
+        },
+        "onTime": {
+          "type": "boolean"
+        },
+        "expedited": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShipmentPageResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "page": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "pageSize": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ShipmentDto"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "now": {
+          "format": "double",
+          "type": "number"
+        },
+        "kpis": {
+          "$ref": "#/definitions/Kpis"
+        },
+        "modeSplit": {
+          "type": "object",
+          "additionalProperties": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "modeStats": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ModeStat"
+          }
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SeriesPoint"
+          }
+        },
+        "lanes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LaneRow"
+          }
+        },
+        "carriers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CarrierRow"
+          }
+        },
+        "hubs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HubRow"
+          }
+        },
+        "departures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Shipment"
+          }
+        },
+        "alerts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LogisticsEvent"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "TelemetryRequest": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/JsonNode"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "host": "terra-api.azurewebsites.net",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "x-ms-connector-metadata": [
+    {
+      "propertyName": "Website",
+      "propertyValue": "https://terra-web.azurestaticapps.net"
+    },
+    {
+      "propertyName": "Categories",
+      "propertyValue": "Productivity;Business Intelligence"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+test/
+scripts/
+local.settings*.json
+*.md

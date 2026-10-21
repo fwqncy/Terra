@@ -1,0 +1,96 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": { "connectionReferenceLogicalName": "terra_sharedteams" },
+        "api": { "name": "shared_teams" }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": { "connectionReferenceLogicalName": "terra_sharedoffice365" },
+        "api": { "name": "shared_office365" }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": { "defaultValue": {}, "type": "Object" },
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "Ops Team Id (terra_OpsTeamId)": { "defaultValue": "", "type": "String", "metadata": { "schemaName": "terra_OpsTeamId" } },
+        "Ops Channel Id (terra_OpsChannelId)": { "defaultValue": "", "type": "String", "metadata": { "schemaName": "terra_OpsChannelId" } },
+        "On-call Email (terra_OnCallEmail)": { "defaultValue": "", "type": "String", "metadata": { "schemaName": "terra_OnCallEmail" } }
+      },
+      "triggers": {
+        "When_Terra_raises_an_alert": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "triggerAuthenticationType": "All",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "source": { "type": "string" },
+                "type": { "type": "string" },
+                "severity": { "type": "string" },
+                "shipmentId": { "type": "string" },
+                "mode": { "type": "string" },
+                "message": { "type": "string" },
+                "occurredAt": { "type": "string" },
+                "dashboardUrl": { "type": "string" }
+              },
+              "required": ["type", "severity", "message"]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Is_it_critical": {
+          "type": "If",
+          "runAfter": {},
+          "expression": { "and": [{ "equals": ["@triggerBody()?['severity']", "critical"] }] },
+          "actions": {
+            "Post_card_to_the_ops_channel": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": { "connectionName": "shared_teams", "operationId": "PostCardToConversation", "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams" },
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body/recipient/groupId": "@parameters('Ops Team Id (terra_OpsTeamId)')",
+                  "body/recipient/channelId": "@parameters('Ops Channel Id (terra_OpsChannelId)')",
+                  "body/messageBody": "{\n  \"type\": \"AdaptiveCard\",\n  \"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",\n  \"version\": \"1.5\",\n  \"body\": [\n    { \"type\": \"TextBlock\", \"text\": \"KRAK! Critical shipment alert\", \"weight\": \"Bolder\", \"size\": \"Large\", \"color\": \"Attention\" },\n    { \"type\": \"TextBlock\", \"text\": \"@{triggerBody()?['message']}\", \"wrap\": true },\n    { \"type\": \"FactSet\", \"facts\": [\n      { \"title\": \"Shipment\", \"value\": \"@{triggerBody()?['shipmentId']}\" },\n      { \"title\": \"Mode\", \"value\": \"@{triggerBody()?['mode']}\" },\n      { \"title\": \"When\", \"value\": \"@{triggerBody()?['occurredAt']}\" }\n    ] }\n  ],\n  \"actions\": [ { \"type\": \"Action.OpenUrl\", \"title\": \"Open in Terra\", \"url\": \"@{triggerBody()?['dashboardUrl']}\" } ]\n}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Email_the_on_call_lead": {
+              "type": "OpenApiConnection",
+              "runAfter": { "Post_card_to_the_ops_channel": ["Succeeded", "Failed"] },
+              "inputs": {
+                "host": { "connectionName": "shared_office365", "operationId": "SendEmailV2", "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365" },
+                "parameters": {
+                  "emailMessage/To": "@parameters('On-call Email (terra_OnCallEmail)')",
+                  "emailMessage/Subject": "Terra critical: @{triggerBody()?['shipmentId']} (@{triggerBody()?['mode']})",
+                  "emailMessage/Body": "<p>@{triggerBody()?['message']}</p><p><a href=\"@{triggerBody()?['dashboardUrl']}\">Open the shipment in Terra</a></p>",
+                  "emailMessage/Importance": "High"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "else": { "actions": {} }
+        },
+        "Respond_accepted": {
+          "type": "Response",
+          "kind": "Http",
+          "runAfter": { "Is_it_critical": ["Succeeded", "Failed", "Skipped"] },
+          "inputs": { "statusCode": 202, "body": { "received": true } }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

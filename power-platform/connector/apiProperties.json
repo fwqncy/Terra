@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "connectionParameters": {},
+    "iconBrandColor": "#35369C",
+    "capabilities": [],
+    "publisher": "Terra",
+    "stackOwner": "Terra",
+    "policyTemplateInstances": [
+      {
+        "templateId": "dynamichosturl",
+        "title": "Terra API host",
+        "parameters": {
+          "x-ms-apimTemplateParameter.urlTemplate": "https://@environmentVariables(\"terra_ApiHost\")"
+        }
+      }
+    ]
+  }
+}

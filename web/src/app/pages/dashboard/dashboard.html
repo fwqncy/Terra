@@ -1,0 +1,68 @@
+<div class="page dash">
+  <header class="dash-head">
+    <div>
+      <span class="eyebrow">Ch. 4 · Brisbane network · Simulated clock {{ simTime() }} AEST</span>
+      <h1 class="display">Logistics Dashboard</h1>
+    </div>
+    <div class="row head-tools">
+      <div class="segmented" role="group" aria-label="Data source">
+        <button type="button" [attr.aria-pressed]="logistics.source() === 'local'" (click)="setSource('local')">In-browser sim</button>
+        <button type="button" [attr.aria-pressed]="logistics.source() === 'api'" [disabled]="!api.online()" (click)="setSource('api')" [title]="api.online() ? 'Read the SQL-backed simulation from the .NET API' : 'Start the API to use server data'">
+          API{{ api.online() ? '' : ' (offline)' }}
+        </button>
+      </div>
+      <div class="segmented" role="group" aria-label="Simulation speed">
+        @for (s of [{ v: 2, l: '1×' }, { v: 20, l: '10×' }, { v: 120, l: '60×' }]; track s.v) {
+          <button type="button" [attr.aria-pressed]="logistics.speed() === s.v" (click)="setSpeed(s.v)">{{ s.l }}</button>
+        }
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Dashboard sections">
+    @for (t of tabs; track t.id) {
+      <a [routerLink]="[]" [queryParams]="{ tab: t.id === 'overview' ? null : t.id, page: null }" queryParamsHandling="merge" [class.is-active]="active() === t.id" [attr.aria-current]="active() === t.id ? 'page' : null">
+        <app-icon [name]="t.icon" [size]="16" />{{ t.label }}
+      </a>
+    }
+  </nav>
+
+  @if (active() === 'overview' || active() === 'sustainability' || active() === 'lanes') {
+    <div class="filters row" role="group" aria-label="Filters">
+      <div class="segmented" role="group" aria-label="Time range">
+        @for (r of [{ v: '12', l: 'Last 12 h' }, { v: '24', l: 'Last 24 h' }, { v: '48', l: 'Last 48 h' }]; track r.v) {
+          <button type="button" [attr.aria-pressed]="hours() === +r.v" (click)="setParam('range', r.v === '24' ? null : r.v)">{{ r.l }}</button>
+        }
+      </div>
+      <div class="segmented" role="group" aria-label="Mode">
+        <button type="button" [attr.aria-pressed]="!modeFilter()" (click)="setParam('mode', null)">All modes</button>
+        <button type="button" [attr.aria-pressed]="modeFilter() === 'road'" (click)="setParam('mode', 'road')"><span class="dot" style="color: var(--series-road)"></span>Road</button>
+        <button type="button" [attr.aria-pressed]="modeFilter() === 'air'" (click)="setParam('mode', 'air')"><span class="dot" style="color: var(--series-air)"></span>Air</button>
+        <button type="button" [attr.aria-pressed]="modeFilter() === 'sea'" (click)="setParam('mode', 'sea')"><span class="dot" style="color: var(--series-sea)"></span>Sea</button>
+      </div>
+    </div>
+  }
+
+  <section class="tab-body" [attr.aria-label]="active()">
+    @switch (active()) {
+      @case ('overview') {
+        <app-overview-tab [hours]="hours()" [mode]="modeFilter()" />
+      }
+      @case ('shipments') {
+        <app-shipments-tab [status]="status() ?? 'Active'" [mode]="mode() ?? ''" [q]="q() ?? ''" [page]="+(page() ?? 1) || 1" [sort]="sort() ?? 'etaAt'" [dir]="dir() === 'desc' ? 'desc' : 'asc'" (paramChange)="setParams($event)" />
+      }
+      @case ('lanes') {
+        <app-lanes-tab [mode]="modeFilter()" />
+      }
+      @case ('fleet') {
+        <app-fleet-tab />
+      }
+      @case ('sustainability') {
+        <app-sustainability-tab [hours]="hours()" [mode]="modeFilter()" />
+      }
+      @case ('ai') {
+        <app-ai-lab-tab />
+      }
+    }
+  </section>
+</div>

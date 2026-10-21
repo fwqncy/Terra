@@ -1,0 +1,6 @@
+{
+  "name": "@terra/engine",
+  "private": true,
+  "type": "module",
+  "description": "Framework-free simulation engine: road graphs, world generation, self-driving agents and logistics economics."
+}

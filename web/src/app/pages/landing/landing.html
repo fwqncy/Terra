@@ -1,0 +1,259 @@
+<section #heroSection class="hero" aria-labelledby="hero-title">
+  <div #stage class="stage" aria-hidden="true">
+    <div #canvas class="canvas" [class.is-ready]="ready()"></div>
+    @if (!webgl()) {
+      <div class="fallback">
+        <svg viewBox="0 0 800 400" preserveAspectRatio="xMidYMax slice">
+          <rect width="800" height="400" fill="var(--bg)" />
+          <path d="M0 300 C 200 260 300 340 520 300 S 760 280 800 290 V400 H0Z" fill="var(--brand)" />
+          @for (b of [60, 120, 170, 230, 300, 360, 420, 500, 560, 640, 700]; track b; let i = $index) {
+            <rect [attr.x]="b" [attr.y]="300 - (60 + ((i * 53) % 140))" width="44" [attr.height]="60 + ((i * 53) % 140)" fill="var(--accent)" stroke="var(--ink-line)" stroke-width="4" />
+          }
+        </svg>
+      </div>
+    }
+    <div class="scrim"></div>
+  </div>
+
+  <div class="hero-copy page">
+    <div class="masthead fade">
+      <span class="issue-box"><b>1</b>Variant<br />Edition</span>
+      <span class="eyebrow">Brisbane, Queensland · 27.47°&nbsp;S 153.03°&nbsp;E</span>
+    </div>
+    <h1 id="hero-title" class="display">
+      <span class="line"><span class="word">Build</span>{{ ' ' }}<span class="word">the</span>{{ ' ' }}<span class="word">roads.</span></span>{{ ' ' }}
+      <span class="line accent"><span class="word">Teach</span>{{ ' ' }}<span class="word">the</span>{{ ' ' }}<span class="word">cars.</span></span>
+    </h1>
+    <p class="tagline fade"><em>The AI dispatcher for Brisbane’s roads, bays and skies.</em></p>
+    <ul class="triad fade" aria-label="How Terra works">
+      <li>You build it.</li>
+      <li>They learn it.</li>
+      <li>The coins roll in.</li>
+    </ul>
+    <div class="row cta fade">
+      <a class="btn btn--highlight btn--lg" routerLink="/city">Start Building <app-icon name="arrowRight" /></a>
+      <a class="btn btn--lg" routerLink="/dashboard">See the Dashboard</a>
+    </div>
+    <p class="scroll-cue fade" aria-hidden="true"><span></span>Scroll to continue</p>
+  </div>
+
+  <ol class="chapters page" aria-label="The story so far">
+    @for (c of chapters; track c.n; let i = $index) {
+      <li class="chapter" [class.is-current]="chapter() === i">
+        <article class="panel chapter-card">
+          <span class="caption-box">{{ c.n }}</span>
+          <h2>{{ c.title }}</h2>
+          <p>{{ c.body }}</p>
+        </article>
+      </li>
+    }
+  </ol>
+</section>
+
+<section class="ticker" aria-label="Live network numbers">
+  <button class="btn btn--ghost btn--icon btn--sm ticker-toggle" type="button" [attr.aria-pressed]="tickerPaused()" [attr.aria-label]="tickerPaused() ? 'Resume ticker' : 'Pause ticker'" (click)="tickerPaused.update((v) => !v)">
+    <app-icon [name]="tickerPaused() ? 'play' : 'pause'" [size]="14" />
+  </button>
+  <div class="ticker-track" [class.paused]="tickerPaused() || theme.reducedMotion()">
+    @for (copy of [0, 1]; track copy) {
+      <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
+        @for (t of ticker(); track t.label) {
+          <li><span class="subtle">{{ t.label }}</span> <strong class="tabular">{{ t.value }}</strong></li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+<section class="spread page" aria-labelledby="spread-title">
+  <header class="spread-head reveal">
+    <span class="eyebrow">Issue No. 001 · The Dispatch</span>
+    <h2 id="spread-title" class="display">Built the roads…<br /><span class="accent">now what?</span></h2>
+  </header>
+
+  <div class="panels">
+    <article class="panel comic p-fleet reveal" data-tilt="-1">
+      <div class="p-media"><app-mini-motorway /></div>
+      <div class="p-body">
+        <span class="caption-box">The Fleet</span>
+        <h3>They learn by crashing.</h3>
+        <p>A neural network per car, five ray sensors, one genetic algorithm. Watch the leader weave through M1 traffic: it learned that.</p>
+        <a routerLink="/city" [queryParams]="{ mode: 'motorway' }">Train your own <app-icon name="arrowRight" [size]="16" /></a>
+      </div>
+      <span class="speech bubble-fleet">Beep. Learning…</span>
+    </article>
+
+    <article class="panel comic p-routes reveal" data-tilt="1">
+      <svg class="p-map" viewBox="0 0 320 200" role="img" aria-label="Sea and air lanes from Brisbane to Nouméa, Port Vila, Suva and Auckland">
+        <rect width="320" height="200" fill="var(--surface-2)" />
+        <path d="M0 0h70c-6 30 6 60-8 90-10 22 4 50-2 110H0Z" fill="var(--highlight)" stroke="var(--ink-line)" stroke-width="3" />
+        <path d="M210 40l20 14-6 10-22-12Z M262 120l10 8-6 6-10-8Z M286 70l8 4-4 6-8-4Z" fill="var(--highlight)" stroke="var(--ink-line)" stroke-width="2.5" />
+        <path d="M240 168c10-8 26-12 40-4l-8 22c-12 4-26 2-36-6Z" fill="var(--highlight)" stroke="var(--ink-line)" stroke-width="2.5" />
+        <path d="M66 104 C 130 90 170 70 216 58" fill="none" stroke="var(--series-sea)" stroke-width="3" stroke-dasharray="8 6" />
+        <path d="M66 104 C 150 110 220 120 262 124" fill="none" stroke="var(--series-air)" stroke-width="3" stroke-dasharray="3 6" />
+        <path d="M66 104 C 140 150 210 170 252 172" fill="none" stroke="var(--series-sea)" stroke-width="3" stroke-dasharray="8 6" />
+        <circle cx="66" cy="104" r="7" fill="var(--status-warning)" stroke="var(--ink-line)" stroke-width="3" />
+        <text x="78" y="120" font-size="13" font-weight="800" fill="var(--text)">BNE</text>
+      </svg>
+      <div class="p-body">
+        <span class="caption-box">The Routes</span>
+        <h3>Moreton Bay to the Pacific.</h3>
+        <p>Ships thread the North-West Channel. Freighters dodge cyclones on the way to Nadi. You chart the lanes; they learn to hold them.</p>
+        <a routerLink="/routes">Chart a route <app-icon name="arrowRight" [size]="16" /></a>
+      </div>
+    </article>
+
+    <article class="panel comic p-ops reveal" data-tilt="-1.5">
+      <div class="p-body">
+        <span class="caption-box">3D Ops</span>
+        <h3>Run it like a strategy game.</h3>
+        <p>Warehouses, the port and the airport in one live 3D floor. Click a facility, expand it, watch the trucks multiply.</p>
+        <a routerLink="/ops">Open the ops floor <app-icon name="arrowRight" [size]="16" /></a>
+      </div>
+      <span class="burst sfx" aria-hidden="true">KRAK-A-BOOM!</span>
+    </article>
+
+    <article class="panel comic p-dash reveal" data-tilt="1">
+      <div class="p-body">
+        <span class="caption-box">Live Now</span>
+        <dl class="mini-kpis">
+          <div><dt>On-time</dt><dd class="tabular">{{ fmt.pct(snap().kpis.otd) }}</dd></div>
+          <div><dt>In transit</dt><dd class="tabular">{{ fmt.whole(snap().kpis.inTransit) }}</dd></div>
+          <div><dt>Delayed</dt><dd class="tabular">{{ fmt.whole(snap().kpis.delayed) }}</dd></div>
+        </dl>
+        <a routerLink="/dashboard">Open the dashboard <app-icon name="arrowRight" [size]="16" /></a>
+      </div>
+    </article>
+
+    <article class="panel comic p-depot reveal" data-tilt="-1">
+      <div class="sticker" aria-hidden="true"><span>HELLO</span><small>my name is</small><b>Ute-1</b></div>
+      <div class="p-body">
+        <span class="caption-box">The Depot</span>
+        <h3>Go offline. Keep earning.</h3>
+        <p>Coins tick up while your fleet works. Buy vans, cranes and a 2032 Games contract. Unlock Sydney.</p>
+        <div class="row">
+          <button class="btn btn--highlight" type="button" (click)="game.click()">Dispatch! <span class="tabular">+{{ fmt.one(game.clickValue()) }}</span></button>
+          <a routerLink="/depot">Visit the Depot <app-icon name="arrowRight" [size]="16" /></a>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="tiers page" aria-labelledby="tiers-title">
+  <header class="reveal">
+    <span class="eyebrow">Choose your own</span>
+    <h2 id="tiers-title" class="display">Pick a vehicle.<br /><span class="accent">Any vehicle.</span></h2>
+  </header>
+  <div class="tier-grid">
+    <article class="panel tier reveal">
+      <h3>Courier Bike</h3>
+      <p class="price tabular">15 coins</p>
+      <ul>
+        <li><span>Sensors</span><b>Eyes</b></li>
+        <li><span>Brain</span><b>One (yours)</b></li>
+        <li><span>Earns</span><b class="tabular">0.1 coins/s</b></li>
+        <li><span>Emissions</span><b>Heavy breathing</b></li>
+      </ul>
+    </article>
+    <article class="panel tier tier--hot reveal">
+      <span class="badge badge--warning new">New</span>
+      <h3>Self-Driving Ute</h3>
+      <p class="price tabular">1,100 coins</p>
+      <ul>
+        <li><span>Sensors</span><b>7 rays</b></li>
+        <li><span>Brain</span><b>10 → 8 → 4 neurons</b></li>
+        <li><span>Earns</span><b class="tabular">8 coins/s</b></li>
+        <li><span>Turning circle</span><b>Optimistic</b></li>
+      </ul>
+      <a class="btn btn--primary" routerLink="/depot">Get the Ute</a>
+    </article>
+    <article class="panel tier reveal">
+      <h3>Hyperloop Pod</h3>
+      <p class="price tabular">5.1 billion coins</p>
+      <ul>
+        <li><span>Sensors</span><b>Vibes</b></li>
+        <li><span>Brain</span><b>Board-approved</b></li>
+        <li><span>Earns</span><b class="tabular">260,000 coins/s</b></li>
+        <li><span>BNE → SYD</span><b>37 min, allegedly</b></li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="specs page" aria-labelledby="specs-title">
+  <h2 id="specs-title" class="display reveal">Tech specs</h2>
+  <dl class="spec-list">
+    <div class="reveal"><dt>Edge inference</dt><dd>Every brain runs in your browser. Training happens at 60&nbsp;fps. No GPU was harmed.</dd></div>
+    <div class="reveal"><dt>Always on</dt><dd>The fleet earns offline for 2&nbsp;h at 50% by default. Upgrades raise both.</dd></div>
+    <div class="reveal"><dt>Drop test</dt><dd>Survives roughly 160 crashes a minute during early training. Insurers declined to comment.</dd></div>
+    <div class="reveal"><dt>Real geography</dt><dd>OpenStreetMap streets for Brisbane, the Gold Coast, Sydney and Melbourne; Natural Earth coastlines to Fiji.</dd></div>
+    <div class="reveal"><dt>Legacy support</dt><dd>Keyboard, screen readers, reduced motion, light mode, and your own colour wheel.</dd></div>
+  </dl>
+</section>
+
+<section class="stack page" aria-labelledby="stack-title">
+  <header class="reveal">
+    <span class="eyebrow">Under the bonnet</span>
+    <h2 id="stack-title" class="display">The stack.</h2>
+  </header>
+  <ul class="stack-grid">
+    @for (s of stack; track s.name) {
+      <li class="reveal"><strong>{{ s.name }}</strong><span>{{ s.role }}</span></li>
+    }
+  </ul>
+</section>
+
+<section class="dispatch page" aria-labelledby="dispatch-title">
+  <header class="row reveal">
+    <h2 id="dispatch-title" class="display">Dispatches</h2>
+    <span class="badge">{{ postsSource() === 'wordpress' ? 'Live from WordPress' : 'Built-in issues' }}</span>
+  </header>
+  <div class="posts">
+    @for (p of posts(); track p.id) {
+      <article class="panel post reveal">
+        <span class="issue-box"><b>{{ p.issue }}</b>Issue<br />{{ fmt.date(p.date) }}</span>
+        <h3>{{ p.title }}</h3>
+        <p class="muted">{{ p.excerpt }}</p>
+        @if (isInternal(p.link)) {
+          <a [routerLink]="p.link.split('?')[0]">Read the issue <app-icon name="arrowRight" [size]="16" /></a>
+        } @else {
+          <a [href]="p.link" target="_blank" rel="noopener">Read on the blog <app-icon name="external" [size]="16" /></a>
+        }
+      </article>
+    }
+  </div>
+</section>
+
+<section class="faq page" aria-labelledby="faq-title">
+  <h2 id="faq-title" class="display reveal">Asked before</h2>
+  <div class="faq-list">
+    @for (f of faq; track f.q) {
+      <details class="reveal">
+        <summary>{{ f.q }}</summary>
+        <p>{{ f.a }}</p>
+      </details>
+    }
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="page">
+    <a class="big-cta" routerLink="/city">Request a fleet <app-icon name="arrowRight" [size]="42" [stroke]="2.5" /></a>
+    <div class="foot-grid">
+      <p class="muted"><em>Not an app on the clock. A city that learns.</em></p>
+      <nav aria-label="Footer">
+        <a routerLink="/city">City Lab</a>
+        <a routerLink="/routes">Routes</a>
+        <a routerLink="/ops">3D Ops</a>
+        <a routerLink="/dashboard">Dashboard</a>
+        <a routerLink="/depot">Depot</a>
+        <a routerLink="/settings">Settings</a>
+      </nav>
+      <p class="subtle small">
+        Street data © OpenStreetMap contributors (ODbL). Coastlines from Natural Earth. All companies, carriers and customers are fictional.
+        Brisbane, Queensland · Built with <span translate="no">Angular</span>, <span translate="no">.NET</span> and a lot of crashed utes.
+      </p>
+    </div>
+  </div>
+</footer>

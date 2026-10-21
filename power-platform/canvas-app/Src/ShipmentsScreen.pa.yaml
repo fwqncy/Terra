@@ -1,0 +1,86 @@
+Screens:
+  ShipmentsScreen:
+    Properties:
+      Fill: =gInk
+      OnVisible: =Set(gSnapshot, TerraLogistics.GetLogisticsSnapshot())
+    Children:
+      - TitleLabel:
+          Control: Label
+          Properties:
+            Text: ="TERRA OPS · AT-RISK SHIPMENTS"
+            Color: =gLight
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Size: =22
+            X: =24
+            Y: =20
+            Width: =Parent.Width - 48
+            Height: =48
+      - KpiLabel:
+          Control: Label
+          Properties:
+            Text: ="On-time " & Text(gSnapshot.kpis.otd, "0.0%") & "  ·  In transit " & gSnapshot.kpis.inTransit & "  ·  Delayed " & gSnapshot.kpis.delayed
+            Color: =gLight
+            Size: =14
+            X: =24
+            Y: =68
+            Width: =Parent.Width - 48
+            Height: =32
+      - StatusTabs:
+          Control: Classic/DropDown
+          Properties:
+            Items: =["Delayed", "Exception", "At Hub", "Active"]
+            Default: =gStatus
+            OnChange: =Set(gStatus, Self.Selected.Value)
+            X: =24
+            Y: =108
+            Width: =220
+            Height: =40
+            AccessibleLabel: ="Shipment status"
+      - ShipmentGallery:
+          Control: Gallery
+          Variant: Vertical
+          Properties:
+            Items: =TerraLogistics.QueryShipments({status: gStatus, sort: "etaAt", pageSize: 50}).items
+            TemplateSize: =84
+            TemplateFill: =If(ThisItem.priority = "Critical", ColorFade(RGBA(208, 59, 59, 1), 70%), gDeep)
+            X: =24
+            Y: =160
+            Width: =Parent.Width - 48
+            Height: =Parent.Height - 184
+          Children:
+            - ShipmentId:
+                Control: Label
+                Properties:
+                  Text: =ThisItem.id & " · " & ThisItem.mode
+                  Color: =gLight
+                  FontWeight: =FontWeight.Bold
+                  X: =12
+                  Y: =8
+                  Width: =Parent.TemplateWidth - 200
+                  Height: =28
+            - RouteLabel:
+                Control: Label
+                Properties:
+                  Text: =ThisItem.origin & " → " & ThisItem.destinationName & " · " & ThisItem.carrier & If(IsBlank(ThisItem.delayReason), "", " · " & ThisItem.delayReason)
+                  Color: =ColorFade(gLight, 20%)
+                  Size: =12
+                  X: =12
+                  Y: =40
+                  Width: =Parent.TemplateWidth - 200
+                  Height: =28
+            - ExpediteButton:
+                Control: Classic/Button
+                Properties:
+                  Text: =If(ThisItem.expedited, "Expedited", "Expedite")
+                  DisplayMode: =If(ThisItem.expedited, DisplayMode.Disabled, DisplayMode.Edit)
+                  OnSelect: |-
+                    =TerraLogistics.ExpediteShipment(ThisItem.id);
+                    Notify("Expedited " & ThisItem.id & ". New ETA brought forward.", NotificationType.Success);
+                    Refresh(ShipmentGallery)
+                  Fill: =gLight
+                  Color: =gInk
+                  X: =Parent.TemplateWidth - 168
+                  Y: =20
+                  Width: =148
+                  Height: =44

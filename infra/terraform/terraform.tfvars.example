@@ -1,0 +1,7 @@
+project         = "terra"
+environment     = "dev"
+location        = "australiaeast"
+app_service_sku = "B1"
+# api_image is set by CI: terra-api:<git sha>
+# power_automate_url = "https://prod-00.australiasoutheast.logic.azure.com/workflows/…"
+enable_wordpress = false

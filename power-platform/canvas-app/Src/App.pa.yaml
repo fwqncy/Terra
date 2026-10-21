@@ -1,0 +1,11 @@
+# Terra Ops — canvas app source (Power Apps YAML). See ../../README.md for import steps.
+App:
+  Properties:
+    Theme: =PowerAppsTheme
+    OnStart: |-
+      =Set(gInk, ColorValue("#24201A"));
+      Set(gDeep, ColorValue("#3F2548"));
+      Set(gPrimary, ColorValue("#35369C"));
+      Set(gAccent, ColorValue("#7C679E"));
+      Set(gLight, ColorValue("#C8C793"));
+      Set(gStatus, "Delayed")

@@ -1,0 +1,93 @@
+<h1 class="sr-only">3D operations floor</h1>
+<div class="ops">
+  <div #mount class="scene" [class.is-ready]="ready()" role="application" aria-roledescription="3D operations map" aria-label="3D logistics floor. Drag to orbit, scroll to zoom. Use the facility list to select with the keyboard."></div>
+
+  @if (!webgl()) {
+    <div class="no-gl panel">
+      <span class="caption-box">2D fallback</span>
+      <p>Your browser can’t run WebGL, so the 3D floor is off. Everything else on this page still works.</p>
+    </div>
+  }
+
+  <header class="resources panel">
+    <div class="res"><app-icon name="coin" /><span class="subtle">Coins</span><strong class="tabular">{{ formatCoins(game.state().coins) }}</strong></div>
+    <div class="res"><app-icon name="bolt" /><span class="subtle">Per second</span><strong class="tabular">{{ formatCoins(game.cps()) }}</strong></div>
+    <div class="res"><app-icon name="check" /><span class="subtle">On-time</span><strong class="tabular">{{ fmt.pct(snap().kpis.otd) }}</strong></div>
+    <div class="res"><app-icon name="truck" /><span class="subtle">In transit</span><strong class="tabular">{{ fmt.whole(snap().kpis.inTransit) }}</strong></div>
+    <div class="res"><app-icon name="clock" /><span class="subtle">Floor time</span><strong class="tabular">{{ clockText() || '—' }}</strong></div>
+    <div class="segmented" role="group" aria-label="Simulation speed">
+      <button type="button" [attr.aria-pressed]="paused()" (click)="togglePause()" [attr.aria-label]="paused() ? 'Resume' : 'Pause'"><app-icon [name]="paused() ? 'play' : 'pause'" [size]="14" /></button>
+      @for (s of [1, 3, 10]; track s) {
+        <button type="button" [attr.aria-pressed]="!paused() && speed() === s" (click)="setSpeed(s)">{{ s }}×</button>
+      }
+    </div>
+  </header>
+
+  <nav class="facilities panel" aria-label="Facilities">
+    <h2 class="panel__title">Facilities</h2>
+    <ul>
+      @for (f of facilities(); track f.id) {
+        <li>
+          <button type="button" class="fac" [attr.aria-pressed]="selected() === f.id" [class.is-hover]="hovered() === f.id" (click)="select(selected() === f.id ? null : f.id)">
+            <app-icon [name]="f.icon" />
+            <span class="fac-name">{{ f.name }}<small class="subtle">Lv {{ f.level }}/{{ maxLevel }}</small></span>
+            <span class="meter" [attr.data-level]="occupancyLevel(f.occupancy)" role="meter" [attr.aria-label]="f.name + ' occupancy'" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="Math.round(f.occupancy * 100)"><span [style.width.%]="f.occupancy * 100"></span></span>
+          </button>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  @if (current(); as f) {
+    <section class="inspector panel" aria-labelledby="insp-title">
+      <div class="insp-head">
+        <span class="caption-box">{{ f.kind }}</span>
+        <button class="btn btn--ghost btn--icon btn--sm" type="button" aria-label="Close inspector" (click)="select(null)"><app-icon name="x" [size]="16" /></button>
+      </div>
+      <h2 id="insp-title">{{ f.name }}</h2>
+      <p class="muted small">{{ f.blurb }}</p>
+      <dl class="insp-stats tabular">
+        <div><dt>Level</dt><dd>{{ f.level }}/{{ maxLevel }}</dd></div>
+        <div><dt>Occupancy</dt><dd [class]="'occ-' + occupancyLevel(f.occupancy)">{{ fmt.pct(f.occupancy) }}</dd></div>
+        <div><dt>Docks busy</dt><dd>{{ f.busy }}/{{ f.doors }}</dd></div>
+        <div><dt>Capacity</dt><dd>{{ fmt.whole(f.capacity) }}&nbsp;{{ f.unit }}</dd></div>
+      </dl>
+      @if (f.occupancy > 0.9) {
+        <p class="badge badge--critical"><app-icon name="alert" />Near capacity: expand or rush orders out</p>
+      }
+      <div class="row actions">
+        @if (f.nextCost !== null) {
+          <button class="btn btn--primary" type="button" [class.is-unaffordable]="game.state().coins < f.nextCost" (click)="game.upgradeFacility(f.id)">
+            Expand to Lv {{ f.level + 1 }} · {{ formatCoins(f.nextCost) }}
+          </button>
+        } @else {
+          <span class="badge badge--good"><app-icon name="check" />Fully expanded</span>
+        }
+        <button class="btn" type="button" [disabled]="!rushReady()" (click)="rush()">{{ rushReady() ? 'Rush Order' : 'Rushing…' }}</button>
+      </div>
+      <h3 class="sub">Next departures</h3>
+      <ul class="deps">
+        @for (d of departures(); track d.id) {
+          <li class="tabular"><span>{{ fmt.time(d.departAt) }}</span><strong>{{ d.destinationName }}</strong><span class="subtle">{{ d.carrier }}</span></li>
+        } @empty {
+          <li class="subtle">No departures booked in the next 12&nbsp;h.</li>
+        }
+      </ul>
+    </section>
+  } @else {
+    <section class="inspector panel hint-card">
+      <h2>Run the floor</h2>
+      <p class="muted small">Click a warehouse, the port or the airport (or pick one from the list) to inspect it, expand it and rush orders. Your Depot fleet drives how many trucks, ships and planes you see.</p>
+      <a class="btn btn--sm" routerLink="/depot">Grow the Fleet</a>
+    </section>
+  }
+
+  <aside class="feed" tabindex="0" aria-label="Live alerts" aria-live="polite">
+    @for (a of alerts(); track a.id) {
+      <div class="speech small-speech" [attr.data-severity]="a.severity">
+        <span class="badge" [class.badge--critical]="a.severity === 'critical'" [class.badge--warning]="a.severity === 'warning'">{{ a.severity === 'critical' ? 'Critical' : a.severity === 'warning' ? 'Delay' : 'Update' }}</span>
+        {{ a.message }}
+      </div>
+    }
+  </aside>
+</div>

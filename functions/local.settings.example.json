@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "TERRA_API_URL": "http://localhost:5080",
+    "COSMOS_MONGO_CONNECTION": "mongodb://localhost:27017",
+    "COSMOS_DATABASE": "terra",
+    "POWER_AUTOMATE_URL": "",
+    "WEBHOOK_SECRET": "",
+    "WORDPRESS_URL": "http://localhost:8080",
+    "WORDPRESS_USER": "",
+    "WORDPRESS_APP_PASSWORD": ""
+  }
+}

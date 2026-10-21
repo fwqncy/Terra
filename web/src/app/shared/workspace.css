@@ -1,0 +1,258 @@
+/* Shared layout for canvas workspaces (City Lab, Routes). */
+
+:host {
+  display: block;
+  flex: 1;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  height: calc(100dvh - var(--topbar-h));
+  min-height: 520px;
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  border-right: 2.5px solid var(--ink-line);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  outline: none;
+}
+
+.canvas.is-pan {
+  cursor: grab;
+}
+
+.canvas.is-pan:active {
+  cursor: grabbing;
+}
+
+.canvas:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--focus);
+}
+
+.hud {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+.hud--tl {
+  top: 14px;
+  left: 14px;
+  flex-wrap: wrap;
+}
+
+.hud--tr {
+  top: 14px;
+  right: 14px;
+  pointer-events: auto;
+}
+
+.hud--bl {
+  left: 14px;
+  bottom: 14px;
+}
+
+.hud--br {
+  right: 14px;
+  bottom: 14px;
+}
+
+.zoom {
+  flex-direction: column;
+}
+
+.statline {
+  max-width: min(70%, 640px);
+  padding: 8px 12px;
+  border-radius: var(--r-2);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 2px solid var(--ink-line);
+  box-shadow: var(--comic-shadow-sm);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.subtle-badge {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 700ms linear infinite;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.side .tabs {
+  padding: 0 8px;
+  flex: none;
+}
+
+.side-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 24px;
+}
+
+.group {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.group:last-child {
+  border-bottom: 0;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.wide {
+  width: 100%;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.empty-note {
+  padding: 14px;
+  border-radius: var(--r-2);
+  border: 1.5px dashed var(--border-strong);
+  color: var(--text-2);
+  font-size: 14px;
+  list-style: none;
+}
+
+.stats-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.stats-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  border: 1.5px solid var(--border);
+}
+
+.stats-grid span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.stats-grid strong {
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.stats-grid small {
+  font-size: 14px;
+  color: var(--text-3);
+}
+
+.stats-grid .span2 {
+  grid-column: span 2;
+}
+
+.field label output {
+  float: right;
+  color: var(--text);
+}
+
+.select--sm {
+  min-height: 32px;
+  padding-block: 4px;
+  font-size: 14px;
+  width: auto;
+  flex: 1;
+}
+
+.file-btn {
+  cursor: pointer;
+}
+
+.file-btn:focus-within {
+  outline: 2.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.nn {
+  height: 200px;
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  border: 1.5px solid var(--border);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 62dvh auto;
+    height: auto;
+  }
+
+  .stage {
+    border-right: 0;
+    border-bottom: 2.5px solid var(--ink-line);
+  }
+
+  .side-body {
+    overflow: visible;
+  }
+
+  .statline {
+    max-width: calc(100% - 80px);
+    font-size: 12px;
+  }
+}

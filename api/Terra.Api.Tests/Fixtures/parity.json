@@ -1,0 +1,406 @@
+{
+  "generatedBy": "tools/parity-fixtures.mjs",
+  "now": 1792461600000,
+  "logistics": {
+    "seed": 2032,
+    "warmupHours": 72,
+    "advanceMinutes": 30,
+    "time": 1792463400000,
+    "shipmentCount": 1053,
+    "firstShipments": [
+      {
+        "id": "TRA-240001",
+        "mode": "road",
+        "destination": "TWB",
+        "carrier": "Moreton Freight Co.",
+        "customer": "Valley Vinyl",
+        "priority": "Standard",
+        "weightKg": 10475,
+        "costAud": 320,
+        "co2Kg": 137.5,
+        "status": "Delivered",
+        "etaAt": 1792235290959.8428
+      },
+      {
+        "id": "TRA-240002",
+        "mode": "road",
+        "destination": "IPS",
+        "carrier": "Moreton Freight Co.",
+        "customer": "Kangaroo Point Climbing",
+        "priority": "Standard",
+        "weightKg": 4465,
+        "costAud": 83,
+        "co2Kg": 18.8,
+        "status": "Delivered",
+        "etaAt": 1792217169794.3408
+      },
+      {
+        "id": "TRA-240003",
+        "mode": "road",
+        "destination": "LGN",
+        "carrier": "Moreton Freight Co.",
+        "customer": "Paddington Paper Co.",
+        "priority": "Standard",
+        "weightKg": 10540,
+        "costAud": 111,
+        "co2Kg": 33.2,
+        "status": "Delivered",
+        "etaAt": 1792224349070.806
+      },
+      {
+        "id": "TRA-240004",
+        "mode": "air",
+        "destination": "AKL",
+        "carrier": "Coral Wing",
+        "customer": "Wynnum Wharf Fish",
+        "priority": "Standard",
+        "weightKg": 1749,
+        "costAud": 10616,
+        "co2Kg": 2416.4,
+        "status": "Delivered",
+        "etaAt": 1792250014679.483
+      },
+      {
+        "id": "TRA-240005",
+        "mode": "road",
+        "destination": "TSV",
+        "carrier": "Jacaranda Haulage",
+        "customer": "New Farm Florals",
+        "priority": "Standard",
+        "weightKg": 8356,
+        "costAud": 2431,
+        "co2Kg": 1193.2,
+        "status": "Delivered",
+        "etaAt": 1792307048438.4785
+      }
+    ],
+    "kpis": {
+      "otd": 0.956386292834891,
+      "delivered24h": 321,
+      "inTransit": 137,
+      "booked": 54,
+      "delayed": 15,
+      "exceptions": 0,
+      "revenue24h": 457852,
+      "co2Kg24h": 112512,
+      "co2PerTkm": 0.1957034806216161,
+      "costPerKg": 0.2788527772177941,
+      "avgTransitH": {
+        "road": 5.83963978584198,
+        "air": 10.305234701642688,
+        "sea": 33.32382098083497
+      },
+      "utilization": {
+        "road": 0.7636363636363637,
+        "air": 0.28,
+        "sea": 0.54
+      }
+    },
+    "seriesTotals": {
+      "road": 518,
+      "air": 125,
+      "sea": 4,
+      "onTime": 624,
+      "late": 23
+    },
+    "topLanes": [
+      {
+        "lane": "EFD→LGN",
+        "volume": 39
+      },
+      {
+        "lane": "YTL→TSV",
+        "volume": 38
+      },
+      {
+        "lane": "EFD→BYR",
+        "volume": 38
+      },
+      {
+        "lane": "YTL→IPS",
+        "volume": 37
+      },
+      {
+        "lane": "ACR→SYDR",
+        "volume": 34
+      }
+    ],
+    "hubs": [
+      {
+        "id": "EFD",
+        "occupancy": 0.5160422658263353
+      },
+      {
+        "id": "ACR",
+        "occupancy": 0.7435858459740107
+      },
+      {
+        "id": "YTL",
+        "occupancy": 0.6486085737658012
+      },
+      {
+        "id": "PBNE",
+        "occupancy": 0.6769824629869632
+      },
+      {
+        "id": "BNEC",
+        "occupancy": 0.5879786960328264
+      }
+    ],
+    "departures": [
+      "TRA-240971",
+      "TRA-241047",
+      "TRA-241003",
+      "TRA-241035",
+      "TRA-241046"
+    ]
+  },
+  "economy": [
+    {
+      "name": "starter",
+      "state": {
+        "version": 1,
+        "coins": 0,
+        "lifetime": 0,
+        "lifetimeAllTime": 0,
+        "clicks": 0,
+        "tokens": 0,
+        "generators": {
+          "bike": 3,
+          "van": 2,
+          "ute": 0,
+          "truck": 0,
+          "drone": 0,
+          "plane": 0,
+          "ship": 0,
+          "terminal": 0,
+          "hyperloop": 0
+        },
+        "upgrades": [],
+        "owned": {
+          "skins": [
+            "ute"
+          ],
+          "homes": [
+            "queenslander"
+          ],
+          "maps": [
+            "brisbane",
+            "sandbox"
+          ]
+        },
+        "equipped": {
+          "skin": "ute",
+          "home": "queenslander",
+          "map": "brisbane"
+        },
+        "achievements": [],
+        "facilities": {
+          "EFD": 1,
+          "ACR": 1,
+          "YTL": 1,
+          "BNEC": 1,
+          "PBNE": 1
+        },
+        "frenzyUntil": 0,
+        "frenzyMult": 1,
+        "lastSeen": 1792450800000,
+        "createdAt": 1792450800000,
+        "stats": {
+          "deliveries": {
+            "road": 0,
+            "air": 0,
+            "sea": 0
+          },
+          "generations": 0,
+          "segmentsBuilt": 0,
+          "crashes": 0,
+          "destinations": [],
+          "bestOvertakes": 0,
+          "offlineClaims": 0,
+          "goldenCaught": 0
+        }
+      },
+      "cps": 2.3,
+      "offline": {
+        "seconds": 10800,
+        "cappedSeconds": 7200,
+        "earned": 8280,
+        "rate": 0.5,
+        "capHours": 2
+      }
+    },
+    {
+      "name": "mid-game",
+      "state": {
+        "version": 1,
+        "coins": 0,
+        "lifetime": 0,
+        "lifetimeAllTime": 0,
+        "clicks": 0,
+        "tokens": 2,
+        "generators": {
+          "bike": 20,
+          "van": 15,
+          "ute": 10,
+          "truck": 4,
+          "drone": 1,
+          "plane": 0,
+          "ship": 0,
+          "terminal": 0,
+          "hyperloop": 0
+        },
+        "upgrades": [
+          "panniers",
+          "parcel-tetris",
+          "lidar",
+          "night-shift",
+          "green-diesel"
+        ],
+        "owned": {
+          "skins": [
+            "ute"
+          ],
+          "homes": [
+            "queenslander"
+          ],
+          "maps": [
+            "brisbane",
+            "sandbox"
+          ]
+        },
+        "equipped": {
+          "skin": "ute",
+          "home": "queenslander",
+          "map": "brisbane"
+        },
+        "achievements": [
+          "first-delivery",
+          "gen-10"
+        ],
+        "facilities": {
+          "EFD": 3,
+          "ACR": 1,
+          "YTL": 2,
+          "BNEC": 1,
+          "PBNE": 1
+        },
+        "frenzyUntil": 0,
+        "frenzyMult": 1,
+        "lastSeen": 1792460400000,
+        "createdAt": 1792460400000,
+        "stats": {
+          "deliveries": {
+            "road": 0,
+            "air": 0,
+            "sea": 0
+          },
+          "generations": 0,
+          "segmentsBuilt": 0,
+          "crashes": 0,
+          "destinations": [],
+          "bestOvertakes": 0,
+          "offlineClaims": 0,
+          "goldenCaught": 0
+        }
+      },
+      "cps": 841.4306334720002,
+      "offline": {
+        "seconds": 1200,
+        "cappedSeconds": 1200,
+        "earned": 504858.3800832001,
+        "rate": 0.5,
+        "capHours": 6
+      }
+    },
+    {
+      "name": "late-game",
+      "state": {
+        "version": 1,
+        "coins": 0,
+        "lifetime": 0,
+        "lifetimeAllTime": 0,
+        "clicks": 0,
+        "tokens": 9,
+        "generators": {
+          "bike": 50,
+          "van": 40,
+          "ute": 30,
+          "truck": 25,
+          "drone": 20,
+          "plane": 10,
+          "ship": 5,
+          "terminal": 1,
+          "hyperloop": 0
+        },
+        "upgrades": [
+          "lidar",
+          "slim-dusty",
+          "neural-dispatch",
+          "olympics",
+          "mezzanine",
+          "autopilot",
+          "twin-lift",
+          "jet-stream",
+          "magpie-radar"
+        ],
+        "owned": {
+          "skins": [
+            "ute"
+          ],
+          "homes": [
+            "queenslander"
+          ],
+          "maps": [
+            "brisbane",
+            "sandbox"
+          ]
+        },
+        "equipped": {
+          "skin": "ute",
+          "home": "queenslander",
+          "map": "brisbane"
+        },
+        "achievements": [
+          "first-delivery",
+          "gen-10",
+          "millionaire",
+          "clicker"
+        ],
+        "facilities": {
+          "EFD": 5,
+          "ACR": 4,
+          "YTL": 3,
+          "BNEC": 2,
+          "PBNE": 5
+        },
+        "frenzyUntil": 1792461610000,
+        "frenzyMult": 7,
+        "lastSeen": 1792353600000,
+        "createdAt": 1792353600000,
+        "stats": {
+          "deliveries": {
+            "road": 0,
+            "air": 0,
+            "sea": 0
+          },
+          "generations": 0,
+          "segmentsBuilt": 0,
+          "crashes": 0,
+          "destinations": [],
+          "bestOvertakes": 0,
+          "offlineClaims": 0,
+          "goldenCaught": 0
+        }
+      },
+      "cps": 7122712.742308382,
+      "offline": {
+        "seconds": 108000,
+        "cappedSeconds": 7200,
+        "earned": 7326218820.660049,
+        "rate": 1,
+        "capHours": 2
+      }
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+name: Deploy to Azure
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC to Azure, no stored cloud passwords
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  infra:
+    name: Terraform apply
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      acr: ${{ steps.out.outputs.acr }}
+      rg: ${{ steps.out.outputs.rg }}
+      api_app: ${{ steps.out.outputs.api_app }}
+      api_host: ${{ steps.out.outputs.api_host }}
+      swa: ${{ steps.out.outputs.swa }}
+      func: ${{ steps.out.outputs.func }}
+      web_url: ${{ steps.out.outputs.web_url }}
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=rg-terra-tfstate" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=terra-prod.tfstate" \
+            -backend-config="use_azuread_auth=true" \
+            -backend-config="use_oidc=true"
+      - name: terraform plan
+        env:
+          TF_VAR_environment: prod
+          TF_VAR_api_image: terra-api:${{ env.IMAGE_TAG }}
+          TF_VAR_power_automate_url: ${{ secrets.POWER_AUTOMATE_URL }}
+          TF_VAR_enable_wordpress: ${{ vars.ENABLE_WORDPRESS || 'false' }}
+        run: terraform plan -input=false -out=tfplan
+      - name: terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+      - id: out
+        run: |
+          echo "acr=$(terraform output -raw acr_login_server)" >> "$GITHUB_OUTPUT"
+          echo "rg=$(terraform output -raw resource_group)" >> "$GITHUB_OUTPUT"
+          echo "api_app=$(terraform output -raw api_app_name)" >> "$GITHUB_OUTPUT"
+          echo "api_host=$(terraform output -raw api_hostname)" >> "$GITHUB_OUTPUT"
+          echo "swa=$(terraform output -raw static_web_app_name)" >> "$GITHUB_OUTPUT"
+          echo "func=$(terraform output -raw function_app_name)" >> "$GITHUB_OUTPUT"
+          echo "web_url=$(terraform output -raw web_url)" >> "$GITHUB_OUTPUT"
+
+  api:
+    name: API image → App Service
+    needs: infra
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build in ACR (no Docker daemon needed)
+        run: az acr build --registry "${{ needs.infra.outputs.acr }}" --image "terra-api:${IMAGE_TAG}" --image terra-api:latest api
+      - name: Restart and wait for health
+        run: |
+          az webapp restart -g "${{ needs.infra.outputs.rg }}" -n "${{ needs.infra.outputs.api_app }}"
+          for i in $(seq 1 30); do
+            curl -fsS "https://${{ needs.infra.outputs.api_host }}/api/health" && exit 0
+            sleep 10
+          done
+          echo "API did not become healthy" && exit 1
+
+  web:
+    name: Angular → Static Web Apps
+    needs: infra
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci && npx ng build
+        working-directory: web
+      - name: Point the app at the API (runtime config, no rebuild)
+        run: echo "window.TERRA_API_BASE = 'https://${{ needs.infra.outputs.api_host }}/api';" > web/dist/web/browser/config.js
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: token
+        run: |
+          TOKEN=$(az staticwebapp secrets list -n "${{ needs.infra.outputs.swa }}" -g "${{ needs.infra.outputs.rg }}" --query properties.apiKey -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.token.outputs.token }}
+          action: upload
+          app_location: web/dist/web/browser
+          skip_app_build: true
+          skip_api_build: true
+
+  functions:
+    name: Azure Functions
+    needs: infra
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci && npm run sync-engine && npm prune --omit=dev
+        working-directory: functions
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ needs.infra.outputs.func }}
+          package: functions
+
+  smoke:
+    name: Smoke test
+    needs: [infra, api, web, functions]
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS "https://${{ needs.infra.outputs.api_host }}/api/health"
+      - run: curl -fsS "${{ needs.infra.outputs.web_url }}" | grep -q "Teach the cars"
+      - run: echo "Deployed ${IMAGE_TAG} → ${{ needs.infra.outputs.web_url }}" >> "$GITHUB_STEP_SUMMARY"

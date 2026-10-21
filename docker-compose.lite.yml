@@ -1,0 +1,13 @@
+# Lite mode: everything except SQL Server (the API falls back to SQLite).
+# For machines that can't run the x86 SQL Server image (Apple silicon without Rosetta, low-memory VMs).
+#   docker compose -f docker-compose.yml -f docker-compose.lite.yml up --build
+services:
+  sqlserver:
+    profiles: ["sqlserver"]
+  api:
+    environment:
+      Database__Provider: Sqlite
+      ConnectionStrings__Sqlite: Data Source=/tmp/terra.db
+    depends_on: !override
+      mongo:
+        condition: service_healthy

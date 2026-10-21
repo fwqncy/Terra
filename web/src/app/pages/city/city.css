@@ -1,0 +1,155 @@
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.tool {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-height: 64px;
+  padding: 8px 4px;
+  border-radius: var(--r-2);
+  border: 2px solid var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 120ms var(--ease-out);
+}
+
+.tool:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+.tool:active {
+  transform: translateY(1px);
+}
+
+.tool[aria-pressed='true'] {
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border-color: var(--ink-line);
+  box-shadow: var(--comic-shadow-sm);
+}
+
+.tool kbd {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 10px;
+  border-bottom-width: 1px;
+}
+
+.tool-hint {
+  min-height: 3lh;
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.counts div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.counts dt {
+  color: var(--text-3);
+}
+
+.counts dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+.danger-zone {
+  margin-top: 4px;
+}
+
+.brain-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brain-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 8px 12px;
+  border-radius: var(--r-2);
+  background: var(--bg-raised);
+  border: 1.5px solid var(--border);
+}
+
+.brain-list li.empty-note {
+  display: block;
+}
+
+.brain-list strong {
+  display: block;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brain-list small {
+  font-size: 12px;
+}
+
+.bootcamp {
+  background-image: radial-gradient(var(--dot) 1.2px, transparent 1.4px);
+  background-size: 8px 8px;
+}
+
+/* 3D view: sits over the 2D canvas and fades in once three.js has its first frame */
+.scene3d {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: var(--bg);
+  transition: opacity 350ms ease;
+}
+
+.scene3d.is-ready {
+  opacity: 1;
+}
+
+.scene3d[hidden] {
+  display: none;
+}
+
+.scene3d ::ng-deep canvas {
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.scene3d ::ng-deep canvas:active {
+  cursor: grabbing;
+}
+
+.scene3d ::ng-deep canvas:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.hud-stack {
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
