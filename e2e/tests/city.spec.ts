@@ -41,6 +41,9 @@ test.describe('City Lab', () => {
   });
 
   test('the 3D view orbits the same city while the cars train', async ({ page }) => {
+    // WebGL is software-rendered (SwiftShader) in headless runs, so input events queue behind frames
+    // when other tests run in parallel: allow the longer timeout and keep the scene light.
+    test.slow();
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/city?mode=train');
@@ -51,12 +54,13 @@ test.describe('City Lab', () => {
     await expect(scene).toHaveClass(/is-ready/, { timeout: 30_000 });
     await expect(page.getByText('Drag to orbit · right-drag to pan · scroll to zoom')).toBeVisible();
 
+    await page.locator('#pop').fill('20');
     await page.getByRole('button', { name: 'Start Training' }).click();
     await expect(page.locator('#city-status')).toContainText(/Gen \d+ · \d+\/\d+ driving/);
     const box = (await scene.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 - 60, { steps: 12 });
+    await page.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 - 60, { steps: 4 });
     await page.mouse.up();
     await page.mouse.wheel(0, -400);
     await expect(page.locator('#city-status')).toContainText(/driving/);

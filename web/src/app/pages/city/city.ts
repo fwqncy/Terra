@@ -581,6 +581,7 @@ export class CityPage {
     try {
       const b = await this.brains.importFile(file, this.current() === 'motorway' ? 'motorway' : 'city');
       this.seed.set(b.id);
+      this.reseed(); // same as picking it in the list: the next generation starts from this brain
       this.toasts.push({ title: `Imported “${b.name}”`, body: 'Selected as the seed brain.', tone: 'good' });
     } catch (err) {
       this.toasts.push({ title: 'Import failed', body: err instanceof Error ? err.message : 'Unreadable file.', tone: 'critical' });

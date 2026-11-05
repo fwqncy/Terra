@@ -71,13 +71,15 @@ jobs:
         run: terraform apply -input=false -auto-approve tfplan
       - id: out
         run: |
-          echo "acr=$(terraform output -raw acr_login_server)" >> "$GITHUB_OUTPUT"
-          echo "rg=$(terraform output -raw resource_group)" >> "$GITHUB_OUTPUT"
-          echo "api_app=$(terraform output -raw api_app_name)" >> "$GITHUB_OUTPUT"
-          echo "api_host=$(terraform output -raw api_hostname)" >> "$GITHUB_OUTPUT"
-          echo "swa=$(terraform output -raw static_web_app_name)" >> "$GITHUB_OUTPUT"
-          echo "func=$(terraform output -raw function_app_name)" >> "$GITHUB_OUTPUT"
-          echo "web_url=$(terraform output -raw web_url)" >> "$GITHUB_OUTPUT"
+          {
+            echo "acr=$(terraform output -raw acr_login_server)"
+            echo "rg=$(terraform output -raw resource_group)"
+            echo "api_app=$(terraform output -raw api_app_name)"
+            echo "api_host=$(terraform output -raw api_hostname)"
+            echo "swa=$(terraform output -raw static_web_app_name)"
+            echo "func=$(terraform output -raw function_app_name)"
+            echo "web_url=$(terraform output -raw web_url)"
+          } >> "$GITHUB_OUTPUT"
 
   api:
     name: API image → App Service
@@ -98,7 +100,7 @@ jobs:
       - name: Restart and wait for health
         run: |
           az webapp restart -g "${{ needs.infra.outputs.rg }}" -n "${{ needs.infra.outputs.api_app }}"
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -fsS "https://${{ needs.infra.outputs.api_host }}/api/health" && exit 0
             sleep 10
           done
