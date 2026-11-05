@@ -1,5 +1,6 @@
 # Terra — common tasks. Run `make help` to list them.
 .PHONY: help install dev-api dev-web test test-engine test-web test-api test-functions e2e up up-lite up-serverless down connector geodata brains parity tf-validate
+.PHONY: trainer trainer-worlds car-parity test-trainer trainer-venv bench
 
 help: ## List targets
 	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-16s\033[0m %s\n", $$1, $$2}'
@@ -60,3 +61,29 @@ parity: ## Regenerate the JS → C# parity fixture
 
 tf-validate: ## Terraform fmt + validate (no Azure access needed)
 	cd infra/terraform && terraform fmt -check -recursive && terraform init -backend=false -input=false && terraform validate
+
+# ---- Terra Trainer: C++ sim + PyTorch. Python packages live in trainer/py/.venv ----
+TRAINER_PY ?= trainer/py/.venv/bin/python
+TRAINER_BUILD := trainer/sim-cpp/build
+TRAINER_PYFLAGS := $(if $(wildcard $(TRAINER_PY)),-DTERRA_BUILD_PYTHON=ON -DPython_EXECUTABLE=$(abspath $(TRAINER_PY)),)
+
+trainer: ## Build the C++ sim (plus its Python module when trainer/py/.venv exists)
+	cmake -S trainer/sim-cpp -B $(TRAINER_BUILD) -DCMAKE_BUILD_TYPE=Release $(TRAINER_PYFLAGS)
+	cmake --build $(TRAINER_BUILD) -j
+
+trainer-worlds: ## Export City Lab routes for the trainer (JS engine → trainer/worlds)
+	node tools/export-trainer-worlds.mjs
+
+car-parity: ## Regenerate the JS → C++ car parity fixture
+	node tools/car-parity-fixtures.mjs
+
+test-trainer: trainer ## C++ unit tests + JS ⇄ C++ parity (+ pytest when the venv exists)
+	ctest --test-dir $(TRAINER_BUILD) --output-on-failure
+	$(if $(wildcard $(TRAINER_PY)),cd trainer/py && $(abspath $(TRAINER_PY)) -m pytest -q,@echo "skipping pytest: create trainer/py/.venv (see README)")
+
+PYTHON ?= python3
+trainer-venv: ## Create trainer/py/.venv (Python 3.10+; e.g. make trainer-venv PYTHON=python3.12)
+	$(PYTHON) -m venv trainer/py/.venv && trainer/py/.venv/bin/pip install -r trainer/py/requirements.txt
+
+bench: trainer ## Car-steps per second: C++ vs the app's JS in Node and Chromium
+	cd trainer/py && $(abspath $(TRAINER_PY)) -m terra_trainer.bench

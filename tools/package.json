@@ -2,11 +2,15 @@
   "name": "terra-tools",
   "private": true,
   "type": "module",
-  "description": "Data pipelines for Terra: geodata, factory brains, parity fixtures, connector.",
+  "description": "Data pipelines for Terra: geodata, factory brains, parity fixtures, connector, Terra Trainer exports and baselines.",
   "scripts": {
     "geodata": "node build-geodata.mjs",
     "brains": "node pretrain.mjs",
-    "parity": "node parity-fixtures.mjs"
+    "parity": "node parity-fixtures.mjs",
+    "trainer-worlds": "node export-trainer-worlds.mjs",
+    "car-parity": "node car-parity-fixtures.mjs",
+    "bench-js": "node bench-js.mjs",
+    "ga-baseline": "node ga-baseline.mjs"
   },
   "dependencies": {
     "topojson-client": "3.1.0"

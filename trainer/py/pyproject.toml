@@ -1,0 +1,21 @@
+[project]
+name = "terra-trainer"
+version = "1.1.0"
+description = "Offline training for Terra City Lab car brains on the C++ headless sim."
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "torch>=2.2",
+  "pandas>=2.1",
+  "matplotlib>=3.8",
+  "pybind11>=2.12",
+  "cma>=3.3",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = ["slow: longer training runs (deselect with -m 'not slow')"]

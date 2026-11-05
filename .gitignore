@@ -32,3 +32,10 @@ functions/local.settings.json
 *.swp
 .idea/
 tools/node_modules/
+
+# Terra Trainer
+trainer/sim-cpp/build/
+trainer/py/.venv/
+trainer/runs/
+__pycache__/
+.pytest_cache/

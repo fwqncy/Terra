@@ -1,0 +1,8 @@
+# Terra Trainer (Python 3.10+). CPU wheels are enough: the C++ sim does the heavy lifting.
+numpy>=1.26
+torch>=2.2
+pandas>=2.1
+matplotlib>=3.8
+pybind11>=2.12
+cma>=3.3
+pytest>=8

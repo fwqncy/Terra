@@ -137,6 +137,49 @@ jobs:
           path: e2e/playwright-report
           retention-days: 14
 
+  trainer:
+    name: Terra Trainer (C++ sim + PyTorch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: trainer/py/requirements.txt
+      - name: Python packages (CPU-only PyTorch)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install -r trainer/py/requirements.txt
+      - name: Fresh parity fixtures and worlds from the JS engine
+        run: |
+          node tools/car-parity-fixtures.mjs
+          node tools/export-trainer-worlds.mjs
+      - name: Build the C++ library and Python module
+        run: |
+          cmake -S trainer/sim-cpp -B trainer/sim-cpp/build -DCMAKE_BUILD_TYPE=Release -DTERRA_BUILD_PYTHON=ON -DPython_EXECUTABLE="$(which python)"
+          cmake --build trainer/sim-cpp/build -j
+      - name: C++ unit tests + JS ⇄ C++ parity
+        run: ctest --test-dir trainer/sim-cpp/build --output-on-failure
+      - name: Python tests (binding, export validation, ES / CMA-ES smoke)
+        working-directory: trainer/py
+        run: python -m pytest -q
+      - name: Smoke training runs + analysis
+        working-directory: trainer/py
+        run: |
+          python -m terra_trainer.es --generations 6 --population 16 --maps brisbane --out ../runs/ci/cmaes
+          python -m terra_trainer.ppo --updates 2 --cars 64 --horizon 32 --maps brisbane --out ../runs/ci/ppo
+          node ../../tools/ga-baseline.mjs --generations 2 --population 8 --out trainer/runs/ci/browser-ga
+          python -m terra_trainer.analyze ../runs/ci --out ../runs/ci/report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trainer-smoke
+          path: trainer/runs/ci
+          retention-days: 7
+
   docker:
     name: Container images
     needs: [web, api]

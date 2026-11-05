@@ -70,9 +70,10 @@ A cookie-clicker idle game on top of the sims: **Dispatch!** clicks, 9 vehicles 
 | **Serverless** | `functions/` (Azure Functions, Node v4) | `offlineQuote` (the browser's own economy code), `ingestTelemetry` → Cosmos DB, `dailyDispatch` timer → Power Automate + WordPress draft |
 | **Microsoft Power Platform** | `power-platform/` | Custom connector generated from the API's OpenAPI, Power Automate flows (critical-delay alerts to Teams/Outlook, Daily Dispatch), Power Apps "Terra Ops" canvas source |
 | **Docker** | `*/Dockerfile`, `docker-compose.yml` | nginx (CSP, caching, `/api` proxy), API, SQL Server, MongoDB, WordPress + MariaDB, Functions + Azurite |
-| **GitHub Actions CI/CD** | `.github/workflows/` | CI: engine, Angular, .NET (+ parity, migration drift), Functions, PHP lint, Terraform, Playwright, Docker builds. CD: Terraform apply (OIDC) → ACR build → App Service, Static Web Apps, Functions → smoke test |
+| **GitHub Actions CI/CD** | `.github/workflows/` | CI: engine, Angular, .NET (+ parity, migration drift), Functions, PHP lint, Terraform, Playwright, Terra Trainer (C++ build, JS ⇄ C++ parity, pytest, smoke training), Docker builds. CD: Terraform apply (OIDC) → ACR build → App Service, Static Web Apps, Functions → smoke test |
 | **Terraform** | `infra/terraform` (azurerm 5.x) | RG, Log Analytics + App Insights, ACR, Azure SQL (serverless), Cosmos DB (Mongo, serverless), Key Vault (RBAC + Key Vault references), App Service (container, managed identity), Static Web App, Function App, optional WordPress + MySQL |
-| **Playwright** | `e2e/` | 48 tests: journeys, keyboard, theming, persistence, offline earnings, full-stack API, **axe** accessibility on every page, phone layout |
+| **Playwright** | `e2e/` | 51 tests: journeys, keyboard, theming, persistence, offline earnings, full-stack API, **axe** accessibility on every page, phone layout, importing a Terra Trainer brain |
+| **C++ · Python · PyTorch · pandas** (Terra Trainer) | `trainer/` | Headless C++17 port of the car sim with a C interface and pybind11 module, JS ⇄ C++ parity tests, CMA-ES / OpenAI-ES / PPO trainers in PyTorch, pandas analysis. See [Terra Trainer](#terra-trainer-offline-brain-training). |
 | **Azure** | `infra/`, `deploy.yml` | Everything above deploys with one workflow |
 
 ```mermaid
@@ -128,7 +129,8 @@ A `Makefile` wraps the common commands (`make dev-api`, `make dev-web`, `make te
 ## Test it
 ```bash
 make test       # engine (Node) + Angular (Vitest) + .NET (xUnit) + Functions
-make e2e        # Playwright: builds the web app, starts the API, runs 48 tests incl. axe
+make e2e        # Playwright: builds the web app, starts the API, runs 51 tests incl. axe
+make test-trainer  # Terra Trainer: C++ unit + JS ⇄ C++ parity (CTest) and pytest (needs trainer/py/.venv)
 ```
 | Suite | Tests | Highlights |
 | --- | --- | --- |
@@ -136,16 +138,97 @@ make e2e        # Playwright: builds the web app, starts the API, runs 48 tests 
 | Angular (Vitest) | 17 | Every preset × mode meets APCA targets; colour maths; charts render legends and tables |
 | .NET (xUnit) | 19 | JS ⇄ C# simulator and economy parity; idempotency replay; anti-cheat; SQL-backed queries; OpenAPI v2 |
 | Functions | 5 | Shared economy is byte-identical to the browser; telemetry sanitising; Daily Dispatch |
-| Playwright | 48 | Desktop and phone; axe (WCAG 2.1 AA) on 8 pages; full stack with the API |
+| Playwright | 51 | Desktop and phone; axe (WCAG 2.1 AA) on 8 pages; full stack with the API; a Terra Trainer brain imports and drives |
+| Terra Trainer: C++ (CTest) | 10 | Geometry, grid, network, physics, the C interface; **JS ⇄ C++ parity** on 200 single steps and 12 full episodes |
+| Terra Trainer: Python (pytest) | 21 | pybind11 module, NumPy-driven episodes, JS forward-pass parity, export through the browser's validator, ES / CMA-ES / PPO smoke runs, the pandas report |
+
+## Terra Trainer: offline brain training
+
+The browser trains brains with a genetic algorithm at up to 60 fps × the speed setting, on one thread. **Terra Trainer** trains them offline, on every core, and exports them in the exact JSON format the app already imports. The plain-JS engine stays the source of truth: the C++ code is a third, headless implementation used only for training.
+
+```mermaid
+flowchart LR
+  E[JS engine<br/>web/src/engine] -- export-trainer-worlds.mjs --> W[(trainer/worlds/*.json<br/>corridors · routes · starts)]
+  E -- car-parity-fixtures.mjs --> F[(parity fixture)]
+  W --> C[C++17 sim<br/>extern &quot;C&quot; API]
+  F -. CTest parity .-> C
+  C -- pybind11 --> P[PyTorch trainers<br/>CMA-ES · OpenAI-ES · PPO]
+  P --> B[best-brain.json]
+  B -- validate-brain.mjs<br/>NeuralNetwork.isValid --> L[City Lab: Import Brain…<br/>POST /api/brains]
+  P --> A[pandas analysis<br/>docs/trainer]
+```
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| World export | `tools/export-trainer-worlds.mjs` | The JS engine builds each map, suggests Start/Target routes (10 per city, 2 held out) and exports corridor borders, route lines and start poses |
+| C++ sim | `trainer/sim-cpp/src` | Car physics, polygon collision, the 7 ray sensors, route bearing / speed / lane-offset inputs and the step-activation network, in the same operation order as the JS (built with `-ffp-contract=off`). Only dependency: nlohmann/json |
+| C interface | `trainer/sim-cpp/include/terra_sim.h` | `terra_create_world`, `terra_run_episodes` (every brain × route in parallel threads), `terra_create_batch`, `terra_step_batch`, `terra_get_observations`, `terra_destroy` |
+| Python module | `trainer/sim-cpp/python/bindings.cpp` | `terra_sim.World` / `terra_sim.Batch` over NumPy, releasing the GIL while C++ runs |
+| Parity | `tools/car-parity-fixtures.mjs` → `trainer/sim-cpp/tests/test_parity.cpp` | Sensor readings, decisions, positions and crash/finish events match the JS engine: worst difference 9×10⁻¹³ over 200 single steps and 2×10⁻¹³ over 12 full episodes, same ending on the same frame |
+| Trainers | `trainer/py/terra_trainer/es.py`, `ppo.py` | CMA-ES (default) and OpenAI-ES with a PyTorch Adam step, evaluated in C++; PPO on the same browser network (straight-through steps, Bernoulli outputs) |
+| Export | `trainer/py/terra_trainer/export.py`, `tools/validate-brain.mjs` | Writes `{name, domain, generation, fitness, network}`, checks it with the browser's own `NeuralNetwork.isValid` and 200 kB limit, re-scores it with the app's `runEpisode`, and can `--publish` to `POST /api/brains` |
+| Analysis | `trainer/py/terra_trainer/analyze.py`, `tools/ga-baseline.mjs` | Fitness per generation, wall-clock, crash hotspots by road segment, and the in-browser GA run on the same routes |
+
+### Speed: cars simulated per second
+
+Same 1,280 Bootcamp episodes (517,511 car-steps, Brisbane) in every runtime, with identical scores. The JS rows run the app's own `runEpisode`. Measured on an arm64 Mac with 8 cores (`make bench`).
+
+| Runtime | Car-steps / s | Cars at 60 fps | vs Node |
+| --- | ---: | ---: | ---: |
+| C++ (1 thread) | 1,161,929 | 19,365 | 3.3× |
+| C++ (8 threads) | 6,140,802 | 102,347 | 17.7× |
+| JS · Node 22 | 346,933 | 5,782 | 1.0× |
+| JS · headless Chrome 156 | 392,351 | 6,539 | 1.1× |
+
+For scale: City Lab's default 80 cars at its top 10× speed is 48,000 car-steps per second, while it also draws the world. The in-app Bootcamp worker runs headless at the JS rates above, on one thread.
+
+### Results
+
+Three seeds each, 64 brains per generation, 32 training routes across all four cities, 8 held-out routes never trained on. A score of 1 or more means the car arrives. The full report is in [`docs/trainer/summary.md`](docs/trainer/summary.md).
+
+| Algorithm | Best training score (median) | Held-out (median) | Reached 1.1 | Seconds to 1.1 | Seconds for 150 generations |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CMA-ES (C++) | 1.210 | 1.213 | 3/3 | 5.8 | 33 |
+| OpenAI-ES (C++) | 1.085 | 0.979 | 1/3 | 4.4 | 17 |
+| Browser GA (JS, the app's own trainer) | 1.180 | 1.212 | 3/3 | 8.9 | 184 |
+| PPO (C++ env, 120 s budget) | 1.058 | 1.053 | 1/3 | 64.4 | 120 |
+
+![Learning curves](docs/trainer/learning-curves.png)
+
+- The shipped brain, [`trainer/brains/terra-trainer-cmaes.json`](trainer/brains/terra-trainer-cmaes.json), was trained from a random start by CMA-ES in about 40 seconds and completes all 40 routes, including the 8 held out.
+- The browser's GA is a strong baseline: it needs fewer generations than CMA-ES. The speed-up comes from simulating every car in parallel in C++, not from a cleverer optimiser.
+- OpenAI-ES often stalls from a random start on the step network's flat plateaus, but fine-tunes well (`--algo es --init factory --sigma 0.1 --lr 0.02`).
+- Crash hotspots are mostly mid-route (69% of crashes), with 26% in a route's first segment; see the [crash maps](docs/trainer/crash-maps.png).
+
+### Run it
+
+```bash
+make trainer-venv            # Python 3.10+ venv in trainer/py/.venv; pick the interpreter with PYTHON=python3.12
+make trainer                 # CMake build: C++ library, tests, and the terra_sim Python module
+make test-trainer            # C++ unit + JS ⇄ C++ parity, then pytest
+make bench                   # the speed table above (C++ vs Node vs headless Chromium)
+
+cd trainer/py
+.venv/bin/python -m terra_trainer.es                                   # CMA-ES from a random brain → trainer/runs/<run>/
+.venv/bin/python -m terra_trainer.es --algo es --init factory --sigma 0.1 --lr 0.02   # fine-tune the factory brain
+.venv/bin/python -m terra_trainer.ppo --seconds 120 --init random      # PPO comparison
+.venv/bin/python -m terra_trainer.export ../runs/<run>/best-brain.json --publish http://localhost:5080
+node ../../tools/ga-baseline.mjs --generations 150                     # the browser GA on the same routes
+.venv/bin/python -m terra_trainer.analyze ../runs --out ../runs/report # charts + summary.md
+```
+
+Load a brain in the app: **City Lab → Train → Import Brain…**, or publish it to the API so it appears in the cloud brain library. If you change the engine's car, sensors, network or route code, regenerate the fixtures and worlds (`make car-parity trainer-worlds`) and rerun `make test-trainer`; CI does both on every push.
+
+Requirements: CMake 3.20+, a C++17 compiler, Python 3.10+, Node 22. On macOS, CMake works around Command Line Tools installs whose clang can't find the libc++ headers.
 
 ## Deploy to Azure
 1. `./infra/bootstrap.sh <github-owner/repo>` creates Terraform state storage and a GitHub OIDC identity.
 2. Add the repository secrets it prints (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and the variable `TF_STATE_STORAGE`. Optionally add `POWER_AUTOMATE_URL` and `ENABLE_WORDPRESS=true`.
 3. Run **Deploy to Azure** from the Actions tab. It applies Terraform, builds the API image in ACR, deploys the API, the Static Web App and the Functions, and runs smoke tests.
 4. Optional: set the repository variable `AUTO_DEPLOY=true` to deploy automatically after every green **CI** run on `main`.
+5. Import the Power Platform pieces (see `power-platform/README.md`).
 
 Deploys are opt-in: until `TF_STATE_STORAGE` is set, the workflow skips instead of failing. Expect roughly AUD 40–60/month idle. WordPress (`ENABLE_WORDPRESS=true`) adds about AUD 25/month for MySQL.
-4. Import the Power Platform pieces (see `power-platform/README.md`).
 
 ---
 
@@ -179,6 +262,8 @@ power-platform/     Custom connector, flows, canvas app source
 infra/              Terraform (Azure) + bootstrap.sh for OIDC
 e2e/                Playwright + axe
 database/           Idempotent SQL Server schema script
-tools/              Geodata, factory-brain training, parity fixtures, connector builder
+tools/              Geodata, factory-brain training, parity fixtures, connector builder, trainer world export + JS benchmarks
+trainer/            Terra Trainer: sim-cpp/ (C++17 + C API + pybind11), py/ (PyTorch trainers, pandas analysis), worlds/, brains/
+docs/trainer/       Training-run analysis: charts + summary.md
 docs/screenshots/   Images used above
 ```
